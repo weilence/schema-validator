@@ -30,23 +30,26 @@ func (a *ArraySchema) Type() SchemaType {
 }
 
 // Validate validates an array
-func (a *ArraySchema) Validate(ctx *validation.Context, accessor data.Accessor) error {
-	arrAcc, err := accessor.AsArray()
+func (a *ArraySchema) Validate(ctx *validation.Context) error {
+	// 设置当前 schema
+	ctx.SetSchema(a)
+
+	arrAcc, err := ctx.AsArray()
 	if err != nil {
 		return err
 	}
 
 	// Validate array-level constraints (min/max items)
 	for _, validator := range a.validators {
-		if err := validator.Validate(ctx, arrAcc); err != nil {
+		if err := validator.Validate(ctx); err != nil {
 			return err
 		}
 	}
 
 	// Validate each element
 	return arrAcc.Iterate(func(idx int, elem data.Accessor) error {
-		elemCtx := ctx.WithPath(fmt.Sprintf("[%d]", idx))
-		return a.elementSchema.Validate(elemCtx, elem)
+		elemCtx := ctx.WithChild(fmt.Sprintf("[%d]", idx), elem, a.elementSchema)
+		return a.elementSchema.Validate(elemCtx)
 	})
 }
 

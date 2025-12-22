@@ -5,22 +5,26 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/weilence/schema-validator/data"
 	"github.com/weilence/schema-validator/errors"
 )
 
 // RequiredValidator validates that a field is not nil/empty
 type RequiredValidator struct{}
 
-func (v *RequiredValidator) Validate(ctx *Context, value data.FieldAccessor) error {
-	if value.IsNil() {
-		return errors.NewValidationError(ctx.Path, "required", nil)
+func (v *RequiredValidator) Validate(ctx *Context) error {
+	if ctx.IsNil() {
+		return errors.NewValidationError(ctx.Path(), "required", nil)
+	}
+
+	field, err := ctx.AsField()
+	if err != nil {
+		return nil
 	}
 
 	// Check for empty string
-	str := value.String()
+	str := field.String()
 	if strings.TrimSpace(str) == "" {
-		return errors.NewValidationError(ctx.Path, "required", nil)
+		return errors.NewValidationError(ctx.Path(), "required", nil)
 	}
 
 	return nil
@@ -31,29 +35,34 @@ type MinValidator struct {
 	Min interface{}
 }
 
-func (v *MinValidator) Validate(ctx *Context, value data.FieldAccessor) error {
-	if value.IsNil() {
+func (v *MinValidator) Validate(ctx *Context) error {
+	if ctx.IsNil() {
 		return nil // Skip validation for nil values
+	}
+
+	field, err := ctx.AsField()
+	if err != nil {
+		return nil
 	}
 
 	switch min := v.Min.(type) {
 	case int, int64:
 		minVal := toInt64(v.Min)
-		val, err := value.Int()
+		val, err := field.Int()
 		if err == nil && val < minVal {
-			return errors.NewValidationError(ctx.Path, "min", map[string]interface{}{"min": minVal, "actual": val})
+			return errors.NewValidationError(ctx.Path(), "min", map[string]interface{}{"min": minVal, "actual": val})
 		}
 	case float64:
-		val, err := value.Float()
+		val, err := field.Float()
 		if err == nil && val < min {
-			return errors.NewValidationError(ctx.Path, "min", map[string]interface{}{"min": min, "actual": val})
+			return errors.NewValidationError(ctx.Path(), "min", map[string]interface{}{"min": min, "actual": val})
 		}
 	case string:
 		// For strings, min is length
-		str := value.String()
+		str := field.String()
 		minLen := len(min)
 		if len(str) < minLen {
-			return errors.NewValidationError(ctx.Path, "min_length", map[string]interface{}{"min": minLen, "actual": len(str)})
+			return errors.NewValidationError(ctx.Path(), "min_length", map[string]interface{}{"min": minLen, "actual": len(str)})
 		}
 	}
 
@@ -65,29 +74,34 @@ type MaxValidator struct {
 	Max interface{}
 }
 
-func (v *MaxValidator) Validate(ctx *Context, value data.FieldAccessor) error {
-	if value.IsNil() {
+func (v *MaxValidator) Validate(ctx *Context) error {
+	if ctx.IsNil() {
 		return nil // Skip validation for nil values
+	}
+
+	field, err := ctx.AsField()
+	if err != nil {
+		return nil
 	}
 
 	switch max := v.Max.(type) {
 	case int, int64:
 		maxVal := toInt64(v.Max)
-		val, err := value.Int()
+		val, err := field.Int()
 		if err == nil && val > maxVal {
-			return errors.NewValidationError(ctx.Path, "max", map[string]interface{}{"max": maxVal, "actual": val})
+			return errors.NewValidationError(ctx.Path(), "max", map[string]interface{}{"max": maxVal, "actual": val})
 		}
 	case float64:
-		val, err := value.Float()
+		val, err := field.Float()
 		if err == nil && val > max {
-			return errors.NewValidationError(ctx.Path, "max", map[string]interface{}{"max": max, "actual": val})
+			return errors.NewValidationError(ctx.Path(), "max", map[string]interface{}{"max": max, "actual": val})
 		}
 	case string:
 		// For strings, max is length
-		str := value.String()
+		str := field.String()
 		maxLen := len(max)
 		if len(str) > maxLen {
-			return errors.NewValidationError(ctx.Path, "max_length", map[string]interface{}{"max": maxLen, "actual": len(str)})
+			return errors.NewValidationError(ctx.Path(), "max_length", map[string]interface{}{"max": maxLen, "actual": len(str)})
 		}
 	}
 
@@ -99,14 +113,19 @@ type MinLengthValidator struct {
 	MinLength int
 }
 
-func (v *MinLengthValidator) Validate(ctx *Context, value data.FieldAccessor) error {
-	if value.IsNil() {
+func (v *MinLengthValidator) Validate(ctx *Context) error {
+	if ctx.IsNil() {
 		return nil
 	}
 
-	str := value.String()
+	field, err := ctx.AsField()
+	if err != nil {
+		return nil
+	}
+
+	str := field.String()
 	if len(str) < v.MinLength {
-		return errors.NewValidationError(ctx.Path, "min_length", map[string]interface{}{"min": v.MinLength, "actual": len(str)})
+		return errors.NewValidationError(ctx.Path(), "min_length", map[string]interface{}{"min": v.MinLength, "actual": len(str)})
 	}
 
 	return nil
@@ -117,14 +136,19 @@ type MaxLengthValidator struct {
 	MaxLength int
 }
 
-func (v *MaxLengthValidator) Validate(ctx *Context, value data.FieldAccessor) error {
-	if value.IsNil() {
+func (v *MaxLengthValidator) Validate(ctx *Context) error {
+	if ctx.IsNil() {
 		return nil
 	}
 
-	str := value.String()
+	field, err := ctx.AsField()
+	if err != nil {
+		return nil
+	}
+
+	str := field.String()
 	if len(str) > v.MaxLength {
-		return errors.NewValidationError(ctx.Path, "max_length", map[string]interface{}{"max": v.MaxLength, "actual": len(str)})
+		return errors.NewValidationError(ctx.Path(), "max_length", map[string]interface{}{"max": v.MaxLength, "actual": len(str)})
 	}
 
 	return nil
@@ -135,14 +159,19 @@ type EmailValidator struct{}
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
-func (v *EmailValidator) Validate(ctx *Context, value data.FieldAccessor) error {
-	if value.IsNil() {
+func (v *EmailValidator) Validate(ctx *Context) error {
+	if ctx.IsNil() {
 		return nil
 	}
 
-	str := value.String()
+	field, err := ctx.AsField()
+	if err != nil {
+		return nil
+	}
+
+	str := field.String()
 	if !emailRegex.MatchString(str) {
-		return errors.NewValidationError(ctx.Path, "email", nil)
+		return errors.NewValidationError(ctx.Path(), "email", nil)
 	}
 
 	return nil
@@ -153,14 +182,19 @@ type URLValidator struct{}
 
 var urlRegex = regexp.MustCompile(`^https?://[^\s]+$`)
 
-func (v *URLValidator) Validate(ctx *Context, value data.FieldAccessor) error {
-	if value.IsNil() {
+func (v *URLValidator) Validate(ctx *Context) error {
+	if ctx.IsNil() {
 		return nil
 	}
 
-	str := value.String()
+	field, err := ctx.AsField()
+	if err != nil {
+		return nil
+	}
+
+	str := field.String()
 	if !urlRegex.MatchString(str) {
-		return errors.NewValidationError(ctx.Path, "url", nil)
+		return errors.NewValidationError(ctx.Path(), "url", nil)
 	}
 
 	return nil
@@ -171,14 +205,19 @@ type PatternValidator struct {
 	Pattern *regexp.Regexp
 }
 
-func (v *PatternValidator) Validate(ctx *Context, value data.FieldAccessor) error {
-	if value.IsNil() {
+func (v *PatternValidator) Validate(ctx *Context) error {
+	if ctx.IsNil() {
 		return nil
 	}
 
-	str := value.String()
+	field, err := ctx.AsField()
+	if err != nil {
+		return nil
+	}
+
+	str := field.String()
 	if !v.Pattern.MatchString(str) {
-		return errors.NewValidationError(ctx.Path, "pattern", map[string]interface{}{"pattern": v.Pattern.String()})
+		return errors.NewValidationError(ctx.Path(), "pattern", map[string]interface{}{"pattern": v.Pattern.String()})
 	}
 
 	return nil
@@ -189,13 +228,18 @@ type MinItemsValidator struct {
 	MinItems int
 }
 
-func (v *MinItemsValidator) Validate(ctx *Context, arr data.ArrayAccessor) error {
-	if arr.IsNil() {
+func (v *MinItemsValidator) Validate(ctx *Context) error {
+	if ctx.IsNil() {
+		return nil
+	}
+
+	arr, err := ctx.AsArray()
+	if err != nil {
 		return nil
 	}
 
 	if arr.Len() < v.MinItems {
-		return errors.NewValidationError(ctx.Path, "min_items", map[string]interface{}{"min": v.MinItems, "actual": arr.Len()})
+		return errors.NewValidationError(ctx.Path(), "min_items", map[string]interface{}{"min": v.MinItems, "actual": arr.Len()})
 	}
 
 	return nil
@@ -206,13 +250,18 @@ type MaxItemsValidator struct {
 	MaxItems int
 }
 
-func (v *MaxItemsValidator) Validate(ctx *Context, arr data.ArrayAccessor) error {
-	if arr.IsNil() {
+func (v *MaxItemsValidator) Validate(ctx *Context) error {
+	if ctx.IsNil() {
+		return nil
+	}
+
+	arr, err := ctx.AsArray()
+	if err != nil {
 		return nil
 	}
 
 	if arr.Len() > v.MaxItems {
-		return errors.NewValidationError(ctx.Path, "max_items", map[string]interface{}{"max": v.MaxItems, "actual": arr.Len()})
+		return errors.NewValidationError(ctx.Path(), "max_items", map[string]interface{}{"max": v.MaxItems, "actual": arr.Len()})
 	}
 
 	return nil

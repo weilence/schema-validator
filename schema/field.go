@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/weilence/schema-validator/data"
 	"github.com/weilence/schema-validator/validation"
 )
 
@@ -28,20 +27,18 @@ func (f *FieldSchema) Type() SchemaType {
 }
 
 // Validate validates a field value
-func (f *FieldSchema) Validate(ctx *validation.Context, accessor data.Accessor) error {
-	fieldAcc, err := accessor.AsField()
-	if err != nil {
-		return err
-	}
+func (f *FieldSchema) Validate(ctx *validation.Context) error {
+	// 设置当前 schema
+	ctx.SetSchema(f)
 
 	// Check if value is nil and optional
-	if accessor.IsNil() && f.optional {
+	if ctx.IsNil() && f.optional {
 		return nil
 	}
 
 	// Run all validators
 	for _, validator := range f.validators {
-		if err := validator.Validate(ctx, fieldAcc); err != nil {
+		if err := validator.Validate(ctx); err != nil {
 			return err
 		}
 	}

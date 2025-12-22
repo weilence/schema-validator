@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"github.com/weilence/schema-validator/data"
 	"github.com/weilence/schema-validator/validation"
 )
 
@@ -9,10 +8,11 @@ import (
 // The struct can implement this interface to add/remove validation rules based on runtime values
 type SchemaModifier interface {
 	// ModifySchema is called before validation with access to the current object's data
-	// ctx provides access to the validation context including parent and root objects
-	// accessor provides access to the current object's field values
-	// schema is the current ObjectSchema that can be modified
-	ModifySchema(ctx *validation.Context, accessor data.ObjectAccessor, schema *ObjectSchema)
+	// ctx provides access to:
+	//   - validation context (path, parent, root)
+	//   - current object's accessor (via ctx.AsObject())
+	//   - current ObjectSchema (via ctx.ObjectSchema())
+	ModifySchema(ctx *validation.Context)
 }
 
 // SchemaType represents the type of schema
@@ -27,7 +27,8 @@ const (
 // Schema represents a validation schema for any data type
 type Schema interface {
 	// Validate validates data against this schema
-	Validate(ctx *validation.Context, accessor data.Accessor) error
+	// ctx contains both the validation context and the data accessor
+	Validate(ctx *validation.Context) error
 
 	// Type returns the schema type (field/array/object)
 	Type() SchemaType

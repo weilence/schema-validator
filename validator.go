@@ -32,7 +32,7 @@ func (e *Engine) Validate(dataValue interface{}) (*errors.ValidationResult, erro
 	// Execute validation
 	result := errors.NewValidationResult()
 
-	if err := e.validateRecursive(ctx, accessor); err != nil {
+	if err := e.validateRecursive(ctx); err != nil {
 		if verr, ok := err.(*errors.ValidationError); ok {
 			result.AddError(verr)
 		} else {
@@ -45,8 +45,8 @@ func (e *Engine) Validate(dataValue interface{}) (*errors.ValidationResult, erro
 }
 
 // validateRecursive recursively validates data and collects all errors
-func (e *Engine) validateRecursive(ctx *validation.Context, accessor data.Accessor) error {
-	return e.schema.Validate(ctx, accessor)
+func (e *Engine) validateRecursive(ctx *validation.Context) error {
+	return e.schema.Validate(ctx)
 }
 
 // Validator is the main entry point for validation

@@ -30,25 +30,25 @@ func (o *ObjectSchema) Type() SchemaType {
 }
 
 // Validate validates an object
-func (o *ObjectSchema) Validate(ctx *validation.Context, accessor data.Accessor) error {
-	objAcc, err := accessor.AsObject()
+func (o *ObjectSchema) Validate(ctx *validation.Context) error {
+	// 设置当前 schema 到 context
+	ctx.SetSchema(o)
+
+	// 使用缓存的 AsObject
+	objAcc, err := ctx.AsObject()
 	if err != nil {
 		return err
 	}
 
-	// Store parent for cross-field validation
-	oldParent := ctx.Parent
-	ctx.Parent = objAcc
-	defer func() { ctx.Parent = oldParent }()
-
 	// Check if the underlying value implements SchemaModifier
 	// This allows the struct to dynamically modify its validation schema
-	if modifier, ok := accessor.(*data.Value); ok {
+	if modifier, ok := ctx.Accessor().(*data.Value); ok {
 		if !modifier.IsNil() {
 			rawVal := modifier.Raw()
 			if schemaModifier, ok := rawVal.(SchemaModifier); ok {
 				// Call ModifySchema to allow dynamic schema modification
-				schemaModifier.ModifySchema(ctx, objAcc, o)
+				// ctx now contains schema, accessor, and context information
+				schemaModifier.ModifySchema(ctx)
 			}
 		}
 	}
@@ -60,15 +60,17 @@ func (o *ObjectSchema) Validate(ctx *validation.Context, accessor data.Accessor)
 			fieldData = data.NewValue(nil) // nil value for missing field
 		}
 
-		fieldCtx := ctx.WithPath(fieldName)
-		if err := fieldSchema.Validate(fieldCtx, fieldData); err != nil {
+		// 创建子 context - 自动父级追踪和 schema 传递
+		fieldCtx := ctx.WithChild(fieldName, fieldData, fieldSchema)
+
+		if err := fieldSchema.Validate(fieldCtx); err != nil {
 			return err
 		}
 	}
 
 	// Run object-level validators (cross-field)
 	for _, validator := range o.validators {
-		if err := validator.Validate(ctx, objAcc); err != nil {
+		if err := validator.Validate(ctx); err != nil {
 			return err
 		}
 	}

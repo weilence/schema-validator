@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Schema ToString Examples ===\n")
+	fmt.Println("=== Schema ToString Examples ===")
 
 	// Example 1: Simple Field Schema
 	fmt.Println("1. Simple Field Schema:")

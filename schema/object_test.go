@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	validator "github.com/weilence/schema-validator"
-	"github.com/weilence/schema-validator/data"
 	"github.com/weilence/schema-validator/schema"
 	"github.com/weilence/schema-validator/validation"
 )
@@ -16,9 +15,18 @@ type DynamicForm struct {
 	Required bool   `json:"required"`
 }
 
-func (f DynamicForm) ModifySchema(ctx *validation.Context, accessor data.ObjectAccessor, s *schema.ObjectSchema) {
+func (f DynamicForm) ModifySchema(ctx *validation.Context) {
+	// 从 ctx 获取 ObjectSchema
+	s, ok := ctx.ObjectSchema().(*schema.ObjectSchema)
+	if !ok || s == nil {
+		return
+	}
+
+	// 从 ctx 获取 accessor
+	obj, _ := ctx.AsObject()
+
 	// Access current object's fields
-	requiredField, _ := accessor.GetField("required")
+	requiredField, _ := obj.GetField("required")
 	if requiredField != nil {
 		fieldAcc, _ := requiredField.AsField()
 		isRequired, _ := fieldAcc.Bool()
@@ -40,12 +48,12 @@ func (f DynamicForm) ModifySchema(ctx *validation.Context, accessor data.ObjectA
 	}
 
 	// Can also access parent context
-	if ctx.Parent != nil {
+	if ctx.Parent() != nil {
 		// Access parent object fields if needed
 	}
 
 	// Can access root
-	if ctx.Root != nil {
+	if ctx.Root() != nil {
 		// Access root object if needed
 	}
 }
@@ -108,9 +116,18 @@ type NestedAddress struct {
 	ZipCode string `json:"zipCode"`
 }
 
-func (u NestedUser) ModifySchema(ctx *validation.Context, accessor data.ObjectAccessor, s *schema.ObjectSchema) {
+func (u NestedUser) ModifySchema(ctx *validation.Context) {
+	// 从 ctx 获取 ObjectSchema
+	s, ok := ctx.ObjectSchema().(*schema.ObjectSchema)
+	if !ok || s == nil {
+		return
+	}
+
+	// 从 ctx 获取 accessor
+	obj, _ := ctx.AsObject()
+
 	// For embedded structs, access fields directly
-	countryField, exists := accessor.GetField("country")
+	countryField, exists := obj.GetField("country")
 	if !exists {
 		return
 	}

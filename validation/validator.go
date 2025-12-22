@@ -1,44 +1,40 @@
 package validation
 
-import (
-	"github.com/weilence/schema-validator/data"
-)
-
 // FieldValidator validates a single field value
 type FieldValidator interface {
-	Validate(ctx *Context, value data.FieldAccessor) error
+	Validate(ctx *Context) error
 }
 
 // ArrayValidator validates an array as a whole
 type ArrayValidator interface {
-	Validate(ctx *Context, arr data.ArrayAccessor) error
+	Validate(ctx *Context) error
 }
 
 // ObjectValidator validates an object as a whole (for cross-field validation)
 type ObjectValidator interface {
-	Validate(ctx *Context, obj data.ObjectAccessor) error
+	Validate(ctx *Context) error
 }
 
 // FieldValidatorFunc is a function that validates a field
-type FieldValidatorFunc func(ctx *Context, value data.FieldAccessor) error
+type FieldValidatorFunc func(ctx *Context) error
 
 // Validate implements FieldValidator
-func (f FieldValidatorFunc) Validate(ctx *Context, value data.FieldAccessor) error {
-	return f(ctx, value)
+func (f FieldValidatorFunc) Validate(ctx *Context) error {
+	return f(ctx)
 }
 
 // ArrayValidatorFunc is a function that validates an array
-type ArrayValidatorFunc func(ctx *Context, arr data.ArrayAccessor) error
+type ArrayValidatorFunc func(ctx *Context) error
 
 // Validate implements ArrayValidator
-func (f ArrayValidatorFunc) Validate(ctx *Context, arr data.ArrayAccessor) error {
-	return f(ctx, arr)
+func (f ArrayValidatorFunc) Validate(ctx *Context) error {
+	return f(ctx)
 }
 
 // ObjectValidatorFunc is a function that validates an object
-type ObjectValidatorFunc func(ctx *Context, obj data.ObjectAccessor) error
+type ObjectValidatorFunc func(ctx *Context) error
 
 // Validate implements ObjectValidator
-func (f ObjectValidatorFunc) Validate(ctx *Context, obj data.ObjectAccessor) error {
-	return f(ctx, obj)
+func (f ObjectValidatorFunc) Validate(ctx *Context) error {
+	return f(ctx)
 }

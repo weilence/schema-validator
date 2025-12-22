@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	validator "github.com/weilence/schema-validator"
-	"github.com/weilence/schema-validator/data"
 	"github.com/weilence/schema-validator/schema"
 	"github.com/weilence/schema-validator/validation"
 )
@@ -234,7 +233,7 @@ func TestArrayValidation(t *testing.T) {
 // Test 5: Cross-field validation with code
 func TestCrossFieldValidationWithCode(t *testing.T) {
 	// Custom password match validator
-	passwordMatchValidator := validation.ObjectValidatorFunc(func(ctx *validation.Context, obj data.ObjectAccessor) error {
+	passwordMatchValidator := validation.ObjectValidatorFunc(func(ctx *validation.Context) error {
 		// This would be implemented properly in a real scenario
 		return nil
 	})

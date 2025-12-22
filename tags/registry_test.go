@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	validator "github.com/weilence/schema-validator"
-	"github.com/weilence/schema-validator/data"
 	"github.com/weilence/schema-validator/errors"
 	"github.com/weilence/schema-validator/tags"
 	"github.com/weilence/schema-validator/validation"
@@ -25,14 +24,19 @@ func TestMultiParameterValidator(t *testing.T) {
 		min := parseIntHelper(params[0])
 		max := parseIntHelper(params[1])
 
-		return validation.FieldValidatorFunc(func(ctx *validation.Context, value data.FieldAccessor) error {
-			val, err := value.Int()
+		return validation.FieldValidatorFunc(func(ctx *validation.Context) error {
+			field, err := ctx.AsField()
+			if err != nil {
+				return nil
+			}
+
+			val, err := field.Int()
 			if err != nil {
 				return nil
 			}
 
 			if val < int64(min) || val > int64(max) {
-				return errors.NewValidationError(ctx.Path, "between", map[string]interface{}{
+				return errors.NewValidationError(ctx.Path(), "between", map[string]interface{}{
 					"min":    min,
 					"max":    max,
 					"actual": val,
@@ -95,10 +99,11 @@ func TestThreeParameterValidator(t *testing.T) {
 			allowedValues[p] = true
 		}
 
-		return validation.FieldValidatorFunc(func(ctx *validation.Context, value data.FieldAccessor) error {
-			val := value.String()
+		return validation.FieldValidatorFunc(func(ctx *validation.Context) error {
+			field, _ := ctx.AsField()
+			val := field.String()
 			if !allowedValues[val] {
-				return errors.NewValidationError(ctx.Path, "enum", map[string]interface{}{
+				return errors.NewValidationError(ctx.Path(), "enum", map[string]interface{}{
 					"allowed": params,
 					"actual":  val,
 				})

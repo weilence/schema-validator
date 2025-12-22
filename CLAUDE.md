@@ -197,13 +197,17 @@ type PasswordForm struct {
 
 ```go
 passwordValidator := validation.ObjectValidatorFunc(
-    func(ctx *validation.Context, obj data.ObjectAccessor) error {
+    func(ctx *validation.Context) error {
+        obj, _ := ctx.AsObject()
         pwd, _ := obj.GetField("password")
         confirm, _ := obj.GetField("confirm")
 
-        if pwd.AsField().String() != confirm.AsField().String() {
+        pwdField, _ := pwd.AsField()
+        confirmField, _ := confirm.AsField()
+
+        if pwdField.String() != confirmField.String() {
             return errors.NewValidationError(
-                ctx.Path + ".confirm",
+                ctx.Path() + ".confirm",
                 "password_mismatch",
                 nil,
             )
@@ -243,13 +247,18 @@ arraySchema := schema.Array(itemSchema).MinItems(1).MaxItems(10).Build()
 
 ```go
 type SchemaModifier interface {
-    ModifySchema(ctx *validation.Context, accessor data.ObjectAccessor, schema *ObjectSchema)
+    ModifySchema(ctx *validation.Context)
 }
 ```
 
-#### 示例1: 条件必填
+**V2.0 重大变更**：SchemaModifier 接口从 **3 个参数简化为 1 个参数**！
 
-根据标志字段动态设置其他字段是否必填：
+- `ctx` 现在包含所有需要的信息：
+  - 验证上下文（path、parent、root）
+  - 当前对象的 accessor（通过 `ctx.AsObject()`）
+  - 当前 ObjectSchema（通过 `ctx.ObjectSchema()`）
+
+#### 核心概念
 
 ```go
 type DynamicForm struct {
@@ -258,110 +267,35 @@ type DynamicForm struct {
     Required bool   `json:"required"`
 }
 
-func (f DynamicForm) ModifySchema(ctx *validation.Context, accessor data.ObjectAccessor, s *schema.ObjectSchema) {
-    // 读取required字段的值
-    requiredField, _ := accessor.GetField("required")
+func (f DynamicForm) ModifySchema(ctx *validation.Context) {
+    // 从 ctx 获取 ObjectSchema 和 accessor
+    s, ok := ctx.ObjectSchema().(*schema.ObjectSchema)
+    if !ok || s == nil {
+        return
+    }
+    obj, _ := ctx.AsObject()
+
+    // 读取字段值
+    requiredField, _ := obj.GetField("required")
     fieldAcc, _ := requiredField.AsField()
     isRequired, _ := fieldAcc.Bool()
 
-    // 根据required标志动态修改value字段的验证
+    // 动态修改schema
     if isRequired {
         s.AddField("value", schema.Field().
             AddValidator(validation.Required()).
             Build())
-    } else {
-        s.AddField("value", schema.Field().
-            SetOptional(true).
-            Build())
-    }
-}
-
-// 使用
-v, _ := validator.NewFromStruct(DynamicForm{})
-
-// required=true时，value必填
-form1 := DynamicForm{Type: "text", Value: "", Required: true}
-result, _ := v.Validate(form1) // 失败
-
-// required=false时，value可选
-form2 := DynamicForm{Type: "text", Value: "", Required: false}
-result, _ := v.Validate(form2) // 通过
-```
-
-#### 示例2: 访问嵌套对象
-
-根据嵌套对象的值添加验证规则：
-
-```go
-type User struct {
-    Name    string  `json:"name" validate:"required"`
-    Address Address `json:"address"`
-}
-
-type Address struct {
-    Country string `json:"country"`
-    ZipCode string `json:"zipCode"`
-}
-
-func (u User) ModifySchema(ctx *validation.Context, accessor data.ObjectAccessor, s *schema.ObjectSchema) {
-    // 访问嵌套的address.country
-    addressField, _ := accessor.GetField("address")
-    addressObj, _ := addressField.AsObject()
-    countryField, _ := addressObj.GetField("country")
-    countryAcc, _ := countryField.AsField()
-    country := countryAcc.String()
-
-    // 根据国家添加不同的邮编验证
-    if country == "US" {
-        addressSchema := schema.Object().
-            Field("country", schema.Field().Build()).
-            Field("zipCode", schema.Field().
-                AddValidator(validation.MinLength(5)).
-                AddValidator(validation.MaxLength(5)).
-                Build()).
-            Build()
-        s.AddField("address", addressSchema)
     }
 }
 ```
 
-#### 示例3: 访问Parent和Root
+#### 高级用法
 
-```go
-func (obj MyObject) ModifySchema(ctx *validation.Context, accessor data.ObjectAccessor, s *schema.ObjectSchema) {
-    // 访问父对象
-    if ctx.Parent != nil {
-        parentField, _ := ctx.Parent.GetField("someField")
-        // 基于父对象值修改schema
-    }
+- **访问嵌套对象** - 通过 `obj.GetField("address")` 获取嵌套字段
+- **访问Parent和Root** - 使用 `ctx.Parent()` 和 `ctx.Root()` 访问上层数据
+- **遍历数组** - 使用 `arrayAccessor.Iterate()` 遍历数组元素
 
-    // 访问根对象
-    if ctx.Root != nil {
-        rootObj, _ := ctx.Root.AsObject()
-        rootField, _ := rootObj.GetField("someRootField")
-        // 基于根对象值修改schema
-    }
-}
-```
-
-#### 访问数组
-
-```go
-func (obj MyObject) ModifySchema(ctx *validation.Context, accessor data.ObjectAccessor, s *schema.ObjectSchema) {
-    // 访问数组字段
-    itemsField, _ := accessor.GetField("items")
-    itemsArray, _ := itemsField.AsArray()
-
-    // 遍历数组元素
-    itemsArray.Iterate(func(idx int, elem data.Accessor) error {
-        elemObj, _ := elem.AsObject()
-        // 访问数组元素的字段
-        field, _ := elemObj.GetField("fieldName")
-        // 基于数组内容修改schema
-        return nil
-    })
-}
-```
+**完整示例**: 查看 [examples/dynamic_schema/main.go](examples/dynamic_schema/main.go) 了解更多用法
 
 **适用场景**：
 - ✅ 条件必填字段
@@ -384,24 +318,21 @@ validate:"range=0:100:5"         // ["0", "100", "5"] (min, max, step)
 
 ⚠️ **重要**：使用冒号(:)而不是逗号(,)分隔参数，因为逗号用于分隔validator。
 
-#### 示例1: between验证器 (2参数)
+#### 示例: between验证器
 
 ```go
 registry := tags.NewRegistry()
 
 registry.RegisterField("between", func(params []string) (validation.FieldValidator, error) {
-    if len(params) < 2 {
-        return nil, nil
-    }
-
     min := parseInt(params[0])
     max := parseInt(params[1])
 
-    return validation.FieldValidatorFunc(func(ctx *validation.Context, value data.FieldAccessor) error {
-        val, _ := value.Int()
+    return validation.FieldValidatorFunc(func(ctx *validation.Context) error {
+        field, _ := ctx.AsField()
+        val, _ := field.Int()
         if val < int64(min) || val > int64(max) {
-            return errors.NewValidationError(ctx.Path, "between", map[string]interface{}{
-                "min": min, "max": max, "actual": val,
+            return errors.NewValidationError(ctx.Path(), "between", map[string]interface{}{
+                "min": min, "max": max,
             })
         }
         return nil
@@ -412,67 +343,9 @@ registry.RegisterField("between", func(params []string) (validation.FieldValidat
 type Product struct {
     Price int `json:"price" validate:"between=10:100"`
 }
-
-typ := reflect.TypeOf(Product{})
-objSchema, _ := tags.ParseStructTagsWithRegistry(typ, registry)
-v := validator.New(objSchema)
 ```
 
-#### 示例2: enum验证器 (多参数)
-
-```go
-registry.RegisterField("enum", func(params []string) (validation.FieldValidator, error) {
-    allowedValues := make(map[string]bool)
-    for _, p := range params {
-        allowedValues[p] = true
-    }
-
-    return validation.FieldValidatorFunc(func(ctx *validation.Context, value data.FieldAccessor) error {
-        val := value.String()
-        if !allowedValues[val] {
-            return errors.NewValidationError(ctx.Path, "enum", map[string]interface{}{
-                "allowed": params,
-                "actual":  val,
-            })
-        }
-        return nil
-    }), nil
-})
-
-// 使用
-type Settings struct {
-    Theme string `json:"theme" validate:"enum=light:dark:auto"`
-}
-```
-
-#### 示例3: range验证器 (3参数)
-
-```go
-// validate:"range=0:100:5" - 0到100，步长为5
-registry.RegisterField("range", func(params []string) (validation.FieldValidator, error) {
-    if len(params) < 3 {
-        return nil, nil
-    }
-
-    min := parseInt(params[0])
-    max := parseInt(params[1])
-    step := parseInt(params[2])
-
-    return validation.FieldValidatorFunc(func(ctx *validation.Context, value data.FieldAccessor) error {
-        val, _ := value.Int()
-
-        if val < int64(min) || val > int64(max) {
-            return errors.NewValidationError(ctx.Path, "out_of_range", nil)
-        }
-
-        if (int(val)-min)%step != 0 {
-            return errors.NewValidationError(ctx.Path, "invalid_step", nil)
-        }
-
-        return nil
-    }), nil
-})
-```
+**完整示例**: 查看 [examples/custom_validators/main.go](examples/custom_validators/main.go) 了解 between、enum、range 等多参数验证器的实现
 
 ### Schema的JSON表示 (ToString)
 
@@ -485,186 +358,19 @@ registry.RegisterField("range", func(params []string) (validation.FieldValidator
 - ✅ 支持嵌套结构（Object嵌套、Array元素等）
 - ✅ 包含所有验证器信息
 
-#### 示例1: Field Schema
+#### 示例
 
 ```go
 fieldSchema := schema.Field().
     AddValidator(validation.Required()).
-    AddValidator(validation.MinLength(5)).
     AddValidator(validation.Email()).
     Build()
 
 fmt.Println(fieldSchema.ToString())
+// 输出格式化的JSON
 ```
 
-输出：
-```json
-{
-  "type": "field",
-  "optional": false,
-  "validators": [
-    {
-      "name": "required"
-    },
-    {
-      "name": "min_length",
-      "value": 5
-    },
-    {
-      "name": "email"
-    }
-  ]
-}
-```
-
-#### 示例2: Object Schema with Nested Fields
-
-```go
-userSchema := schema.Object().
-    Field("name", schema.Field().AddValidator(validation.Required()).Build()).
-    Field("email", schema.Field().AddValidator(validation.Email()).Build()).
-    Field("age", schema.Field().AddValidator(validation.Min(18)).Build()).
-    Build()
-
-fmt.Println(userSchema.ToString())
-```
-
-输出：
-```json
-{
-  "type": "object",
-  "strict": false,
-  "fields": {
-    "name": {
-      "type": "field",
-      "optional": false,
-      "validators": [
-        {
-          "name": "required"
-        }
-      ]
-    },
-    "email": {
-      "type": "field",
-      "optional": false,
-      "validators": [
-        {
-          "name": "email"
-        }
-      ]
-    },
-    "age": {
-      "type": "field",
-      "optional": false,
-      "validators": [
-        {
-          "name": "min",
-          "value": 18
-        }
-      ]
-    }
-  }
-}
-```
-
-#### 示例3: Complex Nested Schema
-
-```go
-addressSchema := schema.Object().
-    Field("street", schema.Field().AddValidator(validation.Required()).Build()).
-    Field("city", schema.Field().AddValidator(validation.Required()).Build()).
-    Build()
-
-phoneSchema := schema.Object().
-    Field("type", schema.Field().AddValidator(validation.Required()).Build()).
-    Field("number", schema.Field().AddValidator(validation.Required()).Build()).
-    Build()
-
-userSchema := schema.Object().
-    Field("name", schema.Field().AddValidator(validation.Required()).Build()).
-    Field("phones", schema.Array(phoneSchema).MinItems(1).Build()).
-    Field("address", addressSchema).
-    Build()
-
-fmt.Println(userSchema.ToString())
-```
-
-输出：
-```json
-{
-  "type": "object",
-  "strict": false,
-  "fields": {
-    "name": {
-      "type": "field",
-      "optional": false,
-      "validators": [
-        {
-          "name": "required"
-        }
-      ]
-    },
-    "phones": {
-      "type": "array",
-      "minItems": 1,
-      "element": {
-        "type": "object",
-        "strict": false,
-        "fields": {
-          "type": {
-            "type": "field",
-            "optional": false,
-            "validators": [
-              {
-                "name": "required"
-              }
-            ]
-          },
-          "number": {
-            "type": "field",
-            "optional": false,
-            "validators": [
-              {
-                "name": "required"
-              }
-            ]
-          }
-        }
-      },
-      "validators": [
-        {
-          "name": "min_items",
-          "value": 1
-        }
-      ]
-    },
-    "address": {
-      "type": "object",
-      "strict": false,
-      "fields": {
-        "street": {
-          "type": "field",
-          "optional": false,
-          "validators": [
-            {
-              "name": "required"
-            }
-          ]
-        },
-        "city": {
-          "type": "field",
-          "optional": false,
-          "validators": [
-            {
-              "name": "required"
-            }
-          ]
-        }
-      }
-    }
-  }
-}
-```
+**完整示例**: 查看 [examples/tostring/main.go](examples/tostring/main.go) 了解各种Schema的JSON输出格式
 
 #### JSON结构说明
 
@@ -673,12 +379,7 @@ fmt.Println(userSchema.ToString())
 {
   "type": "field",
   "optional": true/false,
-  "validators": [
-    {
-      "name": "validator_name",
-      "value": "parameter_value (如果有)"
-    }
-  ]
+  "validators": [...]
 }
 ```
 
@@ -686,10 +387,9 @@ fmt.Println(userSchema.ToString())
 ```json
 {
   "type": "array",
-  "element": { /* 嵌套的element schema */ },
+  "element": {...},
   "minItems": number,
-  "maxItems": number,
-  "validators": [ /* array validators */ ]
+  "maxItems": number
 }
 ```
 
@@ -698,10 +398,7 @@ fmt.Println(userSchema.ToString())
 {
   "type": "object",
   "strict": true/false,
-  "fields": {
-    "field_name": { /* 嵌套的field schema */ }
-  },
-  "validators": [ /* object validators */ ]
+  "fields": {...}
 }
 ```
 
@@ -898,155 +595,54 @@ func (e *ValidationError) Error() string
 
 ## 完整示例
 
-### 综合使用示例
+完整的可运行示例代码已移至 `examples/` 目录：
 
-```go
-package main
+### 基础示例
+- **[examples/basic/main.go](examples/basic/main.go)** - 涵盖基础功能：
+  - Tag-based validation（标签验证）
+  - Code-based validation（代码方式验证）
+  - Embedded struct with private fields（嵌入结构体及私有字段）
+  - Array validation（数组验证）
+  - Cross-field validation（跨字段验证）
+  - Error handling patterns（错误处理模式）
 
-import (
-    "fmt"
-    "reflect"
+### 高级功能示例
+- **[examples/dynamic_schema/main.go](examples/dynamic_schema/main.go)** - 动态Schema（SchemaModifier）：
+  - 条件必填字段
+  - 基于类型的验证（如国家特定的邮编验证）
 
-    validator "github.com/weilence/schema-validator"
-    "github.com/weilence/schema-validator/data"
-    "github.com/weilence/schema-validator/errors"
-    "github.com/weilence/schema-validator/schema"
-    "github.com/weilence/schema-validator/tags"
-    "github.com/weilence/schema-validator/validation"
-)
+- **[examples/custom_validators/main.go](examples/custom_validators/main.go)** - 多参数自定义验证器：
+  - between validator（范围验证）
+  - enum validator（枚举验证）
+  - range validator with step（步长范围验证）
 
-// 订单表单，综合使用多个高级功能
-type OrderForm struct {
-    OrderType   string `json:"orderType" validate:"enum=standard:express:same_day"`
-    Price       int    `json:"price" validate:"between=1:10000"`
-    MinQuantity int    `json:"minQuantity"`
-    MaxQuantity int    `json:"maxQuantity"`
-    Quantity    int    `json:"quantity"`
-}
+- **[examples/comprehensive/main.go](examples/comprehensive/main.go)** - 综合示例：
+  - 结合 SchemaModifier + 多参数验证器
+  - 动态订单表单验证
+  - 复杂业务逻辑验证
 
-// 实现SchemaModifier接口
-func (f OrderForm) ModifySchema(ctx *validation.Context, accessor data.ObjectAccessor, s *schema.ObjectSchema) {
-    // 1. 根据min/max动态设置quantity范围
-    minField, _ := accessor.GetField("minQuantity")
-    maxField, _ := accessor.GetField("maxQuantity")
+- **[examples/tostring/main.go](examples/tostring/main.go)** - Schema可视化：
+  - Field schema JSON输出
+  - Array schema JSON输出
+  - 嵌套Object schema JSON输出
 
-    if minField != nil && maxField != nil {
-        minAcc, _ := minField.AsField()
-        maxAcc, _ := maxField.AsField()
-        min, _ := minAcc.Int()
-        max, _ := maxAcc.Int()
+### 运行示例
 
-        quantitySchema := schema.Field().
-            AddValidator(validation.Min(int(min))).
-            AddValidator(validation.Max(int(max))).
-            Build()
-        s.AddField("quantity", quantitySchema)
-    }
+```bash
+# 基础示例
+go run examples/basic/main.go
 
-    // 2. 根据订单类型调整价格要求
-    typeField, _ := accessor.GetField("orderType")
-    if typeField != nil {
-        typeAcc, _ := typeField.AsField()
-        orderType := typeAcc.String()
+# 动态Schema示例
+go run examples/dynamic_schema/main.go
 
-        if orderType == "same_day" {
-            // 当日达最低100元
-            priceSchema := schema.Field().
-                AddValidator(validation.Min(100)).
-                Build()
-            s.AddField("price", priceSchema)
-        }
-    }
-}
+# 自定义验证器示例
+go run examples/custom_validators/main.go
 
-func main() {
-    // 创建自定义registry注册enum和between validator
-    registry := tags.NewRegistry()
+# 综合示例
+go run examples/comprehensive/main.go
 
-    // 注册enum validator
-    registry.RegisterField("enum", func(params []string) (validation.FieldValidator, error) {
-        allowedValues := make(map[string]bool)
-        for _, p := range params {
-            allowedValues[p] = true
-        }
-        return validation.FieldValidatorFunc(func(ctx *validation.Context, value data.FieldAccessor) error {
-            if !allowedValues[value.String()] {
-                return errors.NewValidationError(ctx.Path, "enum", map[string]interface{}{
-                    "allowed": params,
-                })
-            }
-            return nil
-        }), nil
-    })
-
-    // 注册between validator
-    registry.RegisterField("between", func(params []string) (validation.FieldValidator, error) {
-        min, max := parseInt(params[0]), parseInt(params[1])
-        return validation.FieldValidatorFunc(func(ctx *validation.Context, value data.FieldAccessor) error {
-            val, _ := value.Int()
-            if val < int64(min) || val > int64(max) {
-                return errors.NewValidationError(ctx.Path, "between", map[string]interface{}{
-                    "min": min, "max": max,
-                })
-            }
-            return nil
-        }), nil
-    })
-
-    // 创建validator
-    typ := reflect.TypeOf(OrderForm{})
-    objSchema, _ := tags.ParseStructTagsWithRegistry(typ, registry)
-    v := validator.New(objSchema)
-
-    // 测试1: 有效订单
-    validOrder := OrderForm{
-        OrderType:   "standard",
-        Price:       50,
-        MinQuantity: 1,
-        MaxQuantity: 10,
-        Quantity:    5,
-    }
-    result, _ := v.Validate(validOrder)
-    fmt.Printf("Valid order: %v\n", result.IsValid())
-
-    // 测试2: 当日达但价格太低
-    invalidOrder := OrderForm{
-        OrderType:   "same_day",
-        Price:       50, // 太低，当日达最低100
-        MinQuantity: 1,
-        MaxQuantity: 10,
-        Quantity:    5,
-    }
-    result, _ = v.Validate(invalidOrder)
-    fmt.Printf("Invalid order (low price): %v\n", result.IsValid())
-    for _, err := range result.Errors() {
-        fmt.Printf("  - %s: %s %v\n", err.FieldPath, err.ErrorCode, err.Params)
-    }
-
-    // 测试3: 数量超出范围
-    invalidOrder2 := OrderForm{
-        OrderType:   "standard",
-        Price:       50,
-        MinQuantity: 1,
-        MaxQuantity: 10,
-        Quantity:    20, // 超过maxQuantity
-    }
-    result, _ = v.Validate(invalidOrder2)
-    fmt.Printf("Invalid order (quantity): %v\n", result.IsValid())
-    for _, err := range result.Errors() {
-        fmt.Printf("  - %s: %s %v\n", err.FieldPath, err.ErrorCode, err.Params)
-    }
-}
-
-func parseInt(s string) int {
-    var result int
-    for _, ch := range s {
-        if ch >= '0' && ch <= '9' {
-            result = result*10 + int(ch-'0')
-        }
-    }
-    return result
-}
+# Schema ToString示例
+go run examples/tostring/main.go
 ```
 
 ---
