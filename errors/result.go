@@ -1,5 +1,7 @@
 package errors
 
+import "strings"
+
 // ValidationResult holds all validation errors
 type ValidationResult struct {
 	errors []*ValidationError
@@ -10,6 +12,19 @@ func NewValidationResult() *ValidationResult {
 	return &ValidationResult{
 		errors: make([]*ValidationError, 0),
 	}
+}
+
+func (r *ValidationResult) Error() string {
+	var sb strings.Builder
+
+	for i, err := range r.errors {
+		if i > 0 {
+			sb.WriteString("\n")
+		}
+		sb.WriteString(err.Error())
+	}
+
+	return sb.String()
 }
 
 // AddError adds a validation error to the result

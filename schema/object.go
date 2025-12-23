@@ -3,24 +3,27 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"reflect"
 
 	"github.com/weilence/schema-validator/data"
-	"github.com/weilence/schema-validator/validation"
 )
 
 // ObjectSchema validates objects/structs/maps
 type ObjectSchema struct {
-	fields     map[string]Schema
-	validators []validation.ObjectValidator
-	strict     bool // disallow unknown fields
+	fields       map[string]Schema
+	fieldNameMap map[string]string // mapping of lower-case field names to actual names
+	validators   []Validator
+	strict       bool // disallow unknown fields
 }
 
 // NewObjectSchema creates a new object schema
 func NewObjectSchema() *ObjectSchema {
 	return &ObjectSchema{
-		fields:     make(map[string]Schema),
-		validators: make([]validation.ObjectValidator, 0),
-		strict:     false,
+		fields:       make(map[string]Schema),
+		fieldNameMap: make(map[string]string),
+		validators:   make([]Validator, 0),
+		strict:       false,
 	}
 }
 
@@ -30,38 +33,27 @@ func (o *ObjectSchema) Type() SchemaType {
 }
 
 // Validate validates an object
-func (o *ObjectSchema) Validate(ctx *validation.Context) error {
-	// 设置当前 schema 到 context
-	ctx.SetSchema(o)
-
-	// 使用缓存的 AsObject
-	objAcc, err := ctx.AsObject()
-	if err != nil {
-		return err
-	}
-
-	// Check if the underlying value implements SchemaModifier
-	// This allows the struct to dynamically modify its validation schema
-	if modifier, ok := ctx.Accessor().(*data.Value); ok {
-		if !modifier.IsNil() {
-			rawVal := modifier.Raw()
-			if schemaModifier, ok := rawVal.(SchemaModifier); ok {
-				// Call ModifySchema to allow dynamic schema modification
-				// ctx now contains schema, accessor, and context information
-				schemaModifier.ModifySchema(ctx)
-			}
+func (o *ObjectSchema) Validate(ctx *Context) error {
+	oa := ctx.Accessor().(data.ObjectAccessor)
+	for _, accessor := range oa.Accessors() {
+		if v, ok := accessor.Raw().(SchemaModifier); ok {
+			v.ModifySchema(ctx)
 		}
 	}
 
-	// Validate each defined field
-	for fieldName, fieldSchema := range o.fields {
-		fieldData, exists := objAcc.GetField(fieldName)
-		if !exists {
-			fieldData = data.NewValue(nil) // nil value for missing field
+	for name, fieldSchema := range o.fields {
+		fieldName := name
+		if mappedName, ok := o.fieldNameMap[name]; ok {
+			fieldName = mappedName
+		}
+
+		fieldData, err := oa.GetField(fieldName)
+		if err != nil {
+			return fmt.Errorf("error accessing field %s: %w", fieldName, err)
 		}
 
 		// 创建子 context - 自动父级追踪和 schema 传递
-		fieldCtx := ctx.WithChild(fieldName, fieldData, fieldSchema)
+		fieldCtx := ctx.WithChild(name, fieldSchema, fieldData)
 
 		if err := fieldSchema.Validate(fieldCtx); err != nil {
 			return err
@@ -80,19 +72,31 @@ func (o *ObjectSchema) Validate(ctx *validation.Context) error {
 
 // AddField adds a field schema
 func (o *ObjectSchema) AddField(name string, schema Schema) *ObjectSchema {
+	// TODO: process duplicate field names
+	if _, ok := o.fields[name]; ok {
+		slog.Warn("overwriting existing field schema", "field", name)
+	}
+
 	o.fields[name] = schema
 	return o
 }
 
-// AddValidator adds an object validator
-func (o *ObjectSchema) AddValidator(validator validation.ObjectValidator) *ObjectSchema {
-	o.validators = append(o.validators, validator)
+func (o *ObjectSchema) RemoveField(name string) *ObjectSchema {
+	delete(o.fields, name)
 	return o
 }
 
-// SetStrict enables/disables strict mode
-func (o *ObjectSchema) SetStrict(strict bool) *ObjectSchema {
-	o.strict = strict
+func (o *ObjectSchema) AddFieldName(name string, fieldName string) *ObjectSchema {
+	o.fieldNameMap[name] = fieldName
+	return o
+}
+
+// AddValidator adds an object validator
+func (o *ObjectSchema) AddValidator(name string, params ...string) *ObjectSchema {
+	v := DefaultRegistry().BuildValidator(name, params)
+	if v != nil {
+		o.validators = append(o.validators, v)
+	}
 	return o
 }
 
@@ -113,17 +117,17 @@ func (o *ObjectSchema) Fields() []string {
 
 // ToString returns a JSON representation of the object schema
 func (o *ObjectSchema) ToString() string {
-	result := map[string]interface{}{
+	result := map[string]any{
 		"type":   "object",
 		"strict": o.strict,
 	}
 
 	// Add fields as nested schemas
 	if len(o.fields) > 0 {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for fieldName, fieldSchema := range o.fields {
 			// Parse the nested schema's JSON string back to a map for proper nesting
-			var fieldMap map[string]interface{}
+			var fieldMap map[string]any
 			fieldJSON := fieldSchema.ToString()
 			if err := json.Unmarshal([]byte(fieldJSON), &fieldMap); err == nil {
 				fields[fieldName] = fieldMap
@@ -135,9 +139,9 @@ func (o *ObjectSchema) ToString() string {
 	}
 
 	if len(o.validators) > 0 {
-		validators := make([]map[string]interface{}, 0, len(o.validators))
+		validators := make([]map[string]any, 0, len(o.validators))
 		for _, v := range o.validators {
-			validators = append(validators, objectValidatorToMap(v))
+			validators = append(validators, validatorToMap(v))
 		}
 		result["validators"] = validators
 	}
@@ -149,11 +153,47 @@ func (o *ObjectSchema) ToString() string {
 	return string(bytes)
 }
 
-// objectValidatorToMap converts an object validator to a map representation
-func objectValidatorToMap(v interface{}) map[string]interface{} {
-	result := map[string]interface{}{
-		"name": "custom",
-		"type": fmt.Sprintf("%T", v),
+func SchemaModifiers(r any) []SchemaModifier {
+	var modifiers []SchemaModifier
+	if r == nil {
+		return modifiers
 	}
-	return result
+
+	rval := reflect.ValueOf(r)
+	for rval.Kind() == reflect.Ptr {
+		if rval.IsNil() {
+			return modifiers
+		}
+		rval = rval.Elem()
+	}
+
+	if schemaModifier, ok := rval.Interface().(SchemaModifier); ok {
+		modifiers = append(modifiers, schemaModifier)
+	}
+
+	// Iterate struct fields and collect SchemaModifier from embedded fields
+	for i := 0; i < rval.NumField(); i++ {
+		sf := rval.Type().Field(i)
+		// Only consider anonymous (embedded) fields
+		if !sf.Anonymous {
+			continue
+		}
+
+		fieldVal := rval.Field(i)
+		if !fieldVal.IsValid() {
+			continue
+		}
+
+		// If the field cannot be interfaced, skip it
+		if !fieldVal.CanInterface() {
+			continue
+		}
+
+		emods := SchemaModifiers(fieldVal.Interface())
+		if len(emods) > 0 {
+			modifiers = append(modifiers, emods...)
+		}
+	}
+
+	return modifiers
 }

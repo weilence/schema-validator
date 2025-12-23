@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/weilence/schema-validator/data"
-	"github.com/weilence/schema-validator/validation"
 )
 
 // ArraySchema validates arrays/slices
@@ -13,14 +12,14 @@ type ArraySchema struct {
 	elementSchema Schema
 	minItems      *int
 	maxItems      *int
-	validators    []validation.ArrayValidator
+	validators    []Validator
 }
 
 // NewArraySchema creates a new array schema
 func NewArraySchema(elementSchema Schema) *ArraySchema {
 	return &ArraySchema{
 		elementSchema: elementSchema,
-		validators:    make([]validation.ArrayValidator, 0),
+		validators:    make([]Validator, 0),
 	}
 }
 
@@ -30,16 +29,7 @@ func (a *ArraySchema) Type() SchemaType {
 }
 
 // Validate validates an array
-func (a *ArraySchema) Validate(ctx *validation.Context) error {
-	// 设置当前 schema
-	ctx.SetSchema(a)
-
-	arrAcc, err := ctx.AsArray()
-	if err != nil {
-		return err
-	}
-
-	// Validate array-level constraints (min/max items)
+func (a *ArraySchema) Validate(ctx *Context) error {
 	for _, validator := range a.validators {
 		if err := validator.Validate(ctx); err != nil {
 			return err
@@ -47,15 +37,23 @@ func (a *ArraySchema) Validate(ctx *validation.Context) error {
 	}
 
 	// Validate each element
-	return arrAcc.Iterate(func(idx int, elem data.Accessor) error {
-		elemCtx := ctx.WithChild(fmt.Sprintf("[%d]", idx), elem, a.elementSchema)
+	accessor, ok := ctx.Accessor().(*data.ArrayAccessor)
+	if !ok {
+		return fmt.Errorf("expected ArrayAccessor, got %T", ctx.Accessor())
+	}
+
+	return accessor.Iterate(func(idx int, childAccessor data.Accessor) error {
+		elemCtx := ctx.WithChild(fmt.Sprintf("[%d]", idx), a.elementSchema, childAccessor)
 		return a.elementSchema.Validate(elemCtx)
 	})
 }
 
-// AddValidator adds an array validator
-func (a *ArraySchema) AddValidator(validator validation.ArrayValidator) *ArraySchema {
-	a.validators = append(a.validators, validator)
+// AddValidatorByName adds an array validator by name from the global registry
+func (a *ArraySchema) AddValidator(name string, params ...string) *ArraySchema {
+	v := DefaultRegistry().BuildValidator(name, params)
+	if v != nil {
+		a.validators = append(a.validators, v)
+	}
 	return a
 }
 
@@ -83,14 +81,14 @@ func (a *ArraySchema) GetMaxItems() *int {
 
 // ToString returns a JSON representation of the array schema
 func (a *ArraySchema) ToString() string {
-	result := map[string]interface{}{
+	result := map[string]any{
 		"type": "array",
 	}
 
 	// Add element schema as nested JSON
 	if a.elementSchema != nil {
 		// Parse the nested schema's JSON string back to a map for proper nesting
-		var elementMap map[string]interface{}
+		var elementMap map[string]any
 		elementJSON := a.elementSchema.ToString()
 		if err := json.Unmarshal([]byte(elementJSON), &elementMap); err == nil {
 			result["element"] = elementMap
@@ -108,9 +106,9 @@ func (a *ArraySchema) ToString() string {
 	}
 
 	if len(a.validators) > 0 {
-		validators := make([]map[string]interface{}, 0, len(a.validators))
+		validators := make([]map[string]any, 0, len(a.validators))
 		for _, v := range a.validators {
-			validators = append(validators, arrayValidatorToMap(v))
+			validators = append(validators, validatorToMap(v))
 		}
 		result["validators"] = validators
 	}
@@ -120,23 +118,4 @@ func (a *ArraySchema) ToString() string {
 		return fmt.Sprintf(`{"type":"array","error":"%s"}`, err.Error())
 	}
 	return string(bytes)
-}
-
-// arrayValidatorToMap converts an array validator to a map representation
-func arrayValidatorToMap(v interface{}) map[string]interface{} {
-	result := map[string]interface{}{}
-
-	switch validator := v.(type) {
-	case *validation.MinItemsValidator:
-		result["name"] = "min_items"
-		result["value"] = validator.MinItems
-	case *validation.MaxItemsValidator:
-		result["name"] = "max_items"
-		result["value"] = validator.MaxItems
-	default:
-		result["name"] = "custom"
-		result["type"] = fmt.Sprintf("%T", v)
-	}
-
-	return result
 }

@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/weilence/schema-validator/data"
+
 	validator "github.com/weilence/schema-validator"
 	"github.com/weilence/schema-validator/errors"
 	"github.com/weilence/schema-validator/schema"
 	"github.com/weilence/schema-validator/tags"
-	"github.com/weilence/schema-validator/validation"
 )
 
 // parseInt 辅助函数
@@ -32,27 +33,27 @@ type OrderForm struct {
 }
 
 // 实现SchemaModifier接口
-func (f OrderForm) ModifySchema(ctx *validation.Context) {
-	s, ok := ctx.ObjectSchema().(*schema.ObjectSchema)
+func (f OrderForm) ModifySchema(ctx *schema.Context) {
+	s, ok := ctx.Schema().(*schema.ObjectSchema)
 	if !ok || s == nil {
 		return
 	}
 
-	obj, _ := ctx.AsObject()
+	obj, _ := ctx.Accessor().(data.ObjectAccessor)
 
 	// 1. 根据min/max动态设置quantity范围
 	minField, _ := obj.GetField("minQuantity")
 	maxField, _ := obj.GetField("maxQuantity")
 
 	if minField != nil && maxField != nil {
-		minAcc, _ := minField.AsField()
-		maxAcc, _ := maxField.AsField()
-		min, _ := minAcc.Int()
-		max, _ := maxAcc.Int()
+		minVal, _ := minField.GetValue("")
+		maxVal, _ := maxField.GetValue("")
+		min, _ := minVal.Int()
+		max, _ := maxVal.Int()
 
 		quantitySchema := schema.Field().
-			AddValidator(validation.Min(int(min))).
-			AddValidator(validation.Max(int(max))).
+			AddValidator("min", fmt.Sprint(int(min))).
+			AddValidator("max", fmt.Sprint(int(max))).
 			Build()
 		s.AddField("quantity", quantitySchema)
 	}
@@ -60,13 +61,13 @@ func (f OrderForm) ModifySchema(ctx *validation.Context) {
 	// 2. 根据订单类型调整价格要求
 	typeField, _ := obj.GetField("orderType")
 	if typeField != nil {
-		typeAcc, _ := typeField.AsField()
-		orderType := typeAcc.String()
+		typeVal, _ := typeField.GetValue("")
+		orderType := typeVal.String()
 
 		if orderType == "same_day" {
 			// 当日达最低100元
 			priceSchema := schema.Field().
-				AddValidator(validation.Min(100)).
+				AddValidator("min", "100").
 				Build()
 			s.AddField("price", priceSchema)
 		}
@@ -77,44 +78,40 @@ func main() {
 	fmt.Println("=== Comprehensive Example: Dynamic Order Form ===")
 
 	// 创建自定义registry注册enum和between validator
-	registry := tags.NewRegistry()
+	registry := schema.NewRegistry()
 
 	// 注册enum validator
-	registry.RegisterField("enum", func(params []string) (validation.FieldValidator, error) {
+	registry.Register("enum", func(ctx *schema.Context, params []string) error {
 		allowedValues := make(map[string]bool)
 		for _, p := range params {
 			allowedValues[p] = true
 		}
-		return validation.FieldValidatorFunc(func(ctx *validation.Context) error {
-			field, _ := ctx.AsField()
-			if !allowedValues[field.String()] {
-				return errors.NewValidationError(ctx.Path(), "enum", map[string]interface{}{
-					"allowed": params,
-				})
-			}
-			return nil
-		}), nil
+		val, _ := ctx.Value()
+		if !allowedValues[val.String()] {
+			return errors.NewValidationError(ctx.Path(), "enum", map[string]any{
+				"allowed": params,
+			})
+		}
+		return nil
 	})
 
 	// 注册between validator
-	registry.RegisterField("between", func(params []string) (validation.FieldValidator, error) {
+	registry.Register("between", func(ctx *schema.Context, params []string) error {
 		min, max := parseInt(params[0]), parseInt(params[1])
-		return validation.FieldValidatorFunc(func(ctx *validation.Context) error {
-			field, _ := ctx.AsField()
-			val, _ := field.Int()
-			if val < int64(min) || val > int64(max) {
-				return errors.NewValidationError(ctx.Path(), "between", map[string]interface{}{
-					"min": min, "max": max,
-				})
-			}
-			return nil
-		}), nil
+		valAcc, _ := ctx.Value()
+		val, _ := valAcc.Int()
+		if val < int64(min) || val > int64(max) {
+			return errors.NewValidationError(ctx.Path(), "between", map[string]any{
+				"min": min, "max": max,
+			})
+		}
+		return nil
 	})
 
 	// 创建validator
 	typ := reflect.TypeOf(OrderForm{})
-	objSchema, _ := tags.ParseStructTagsWithRegistry(typ, registry)
-	v := validator.New(objSchema)
+	objSchema, _ := tags.Parse(typ, tags.WithRegistry(registry))
+	v := validator.NewFromSchema(objSchema)
 
 	// 测试1: 有效标准订单
 	fmt.Println("Test 1: Valid Standard Order")
@@ -126,11 +123,15 @@ func main() {
 		MaxQuantity: 10,
 		Quantity:    5,
 	}
-	result, _ := v.Validate(validOrder)
-	fmt.Printf("Result: %v\n", result.IsValid())
-	if !result.IsValid() {
-		for _, err := range result.Errors() {
-			fmt.Printf("  - %s: %s %v\n", err.FieldPath, err.ErrorCode, err.Params)
+	err := v.Validate(validOrder)
+	fmt.Printf("Result: %v\n", err == nil)
+	if err != nil {
+		if res, ok := err.(*errors.ValidationResult); ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+			}
+		} else {
+			fmt.Printf("  - %v\n", err)
 		}
 	}
 	fmt.Println()
@@ -145,10 +146,16 @@ func main() {
 		MaxQuantity: 10,
 		Quantity:    5,
 	}
-	result, _ = v.Validate(invalidOrder)
-	fmt.Printf("Result: %v\n", result.IsValid())
-	for _, err := range result.Errors() {
-		fmt.Printf("  - %s: %s %v\n", err.FieldPath, err.ErrorCode, err.Params)
+	err = v.Validate(invalidOrder)
+	fmt.Printf("Result: %v\n", err == nil)
+	if err != nil {
+		if res, ok := err.(*errors.ValidationResult); ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+			}
+		} else {
+			fmt.Printf("  - %v\n", err)
+		}
 	}
 	fmt.Println()
 
@@ -162,10 +169,16 @@ func main() {
 		MaxQuantity: 10,
 		Quantity:    20, // 超过maxQuantity
 	}
-	result, _ = v.Validate(invalidOrder2)
-	fmt.Printf("Result: %v\n", result.IsValid())
-	for _, err := range result.Errors() {
-		fmt.Printf("  - %s: %s %v\n", err.FieldPath, err.ErrorCode, err.Params)
+	err = v.Validate(invalidOrder2)
+	fmt.Printf("Result: %v\n", err == nil)
+	if err != nil {
+		if res, ok := err.(*errors.ValidationResult); ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+			}
+		} else {
+			fmt.Printf("  - %v\n", err)
+		}
 	}
 	fmt.Println()
 
@@ -179,8 +192,8 @@ func main() {
 		MaxQuantity: 5,
 		Quantity:    3,
 	}
-	result, _ = v.Validate(validSameDayOrder)
-	fmt.Printf("Result: %v\n", result.IsValid())
+	err = v.Validate(validSameDayOrder)
+	fmt.Printf("Result: %v\n", err == nil)
 	fmt.Println()
 
 	// 测试5: 无效订单类型
@@ -193,10 +206,16 @@ func main() {
 		MaxQuantity: 10,
 		Quantity:    5,
 	}
-	result, _ = v.Validate(invalidOrderType)
-	fmt.Printf("Result: %v\n", result.IsValid())
-	for _, err := range result.Errors() {
-		fmt.Printf("  - %s: %s %v\n", err.FieldPath, err.ErrorCode, err.Params)
+	err = v.Validate(invalidOrderType)
+	fmt.Printf("Result: %v\n", err == nil)
+	if err != nil {
+		if res, ok := err.(*errors.ValidationResult); ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+			}
+		} else {
+			fmt.Printf("  - %v\n", err)
+		}
 	}
 	fmt.Println()
 
@@ -210,10 +229,16 @@ func main() {
 		MaxQuantity: 20,
 		Quantity:    3, // 低于minQuantity
 	}
-	result, _ = v.Validate(belowMinQuantity)
-	fmt.Printf("Result: %v\n", result.IsValid())
-	for _, err := range result.Errors() {
-		fmt.Printf("  - %s: %s %v\n", err.FieldPath, err.ErrorCode, err.Params)
+	err = v.Validate(belowMinQuantity)
+	fmt.Printf("Result: %v\n", err == nil)
+	if err != nil {
+		if res, ok := err.(*errors.ValidationResult); ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+			}
+		} else {
+			fmt.Printf("  - %v\n", err)
+		}
 	}
 
 	fmt.Println("\n=== Comprehensive Example Completed ===")

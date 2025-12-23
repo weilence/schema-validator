@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	validator "github.com/weilence/schema-validator"
+	sverrors "github.com/weilence/schema-validator/errors"
 	"github.com/weilence/schema-validator/schema"
-	"github.com/weilence/schema-validator/validation"
 )
 
 // Example 1: Tag-based validation
@@ -19,7 +19,7 @@ func example1() {
 		Age      int    `json:"age" validate:"min=18,max=120"`
 	}
 
-	v, err := validator.NewFromStruct(User{})
+	v, err := validator.New(User{})
 	if err != nil {
 		panic(err)
 	}
@@ -32,8 +32,8 @@ func example1() {
 		Age:      30,
 	}
 
-	result, _ := v.Validate(validUser)
-	fmt.Printf("Valid user result: %v\n", result.IsValid())
+	err = v.Validate(validUser)
+	fmt.Printf("Valid user result: %v\n", err == nil)
 
 	// Invalid user
 	invalidUser := User{
@@ -43,10 +43,17 @@ func example1() {
 		Age:      15,
 	}
 
-	result, _ = v.Validate(invalidUser)
-	fmt.Printf("Invalid user result: %v\n", result.IsValid())
-	for _, err := range result.Errors() {
-		fmt.Printf("  - %s: %s\n", err.FieldPath, err.ErrorCode)
+	err = v.Validate(invalidUser)
+	fmt.Printf("Invalid user result: %v\n", err == nil)
+	if err != nil {
+		res, ok := err.(*sverrors.ValidationResult)
+		if ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  - %s: %s\n", e.FieldPath, e.ErrorCode)
+			}
+		} else {
+			fmt.Printf("  - %v\n", err)
+		}
 	}
 
 	fmt.Println()
@@ -58,42 +65,49 @@ func example2() {
 
 	userSchema := schema.Object().
 		Field("email", schema.Field().
-			AddValidator(validation.Required()).
-			AddValidator(validation.Email()).
+			AddValidator("required").
+			AddValidator("email").
 			Build()).
 		Field("password", schema.Field().
-			AddValidator(validation.Required()).
-			AddValidator(validation.MinLength(8)).
+			AddValidator("required").
+			AddValidator("min_length", "8").
 			Build()).
 		Field("age", schema.Field().
-			AddValidator(validation.Min(18)).
-			AddValidator(validation.Max(120)).
+			AddValidator("min", "18").
+			AddValidator("max", "120").
 			Build()).
 		Build()
 
-	v := validator.New(userSchema)
+	v := validator.NewFromSchema(userSchema)
 
 	// Valid map data
-	validData := map[string]interface{}{
+	validData := map[string]any{
 		"email":    "jane@example.com",
 		"password": "password123",
 		"age":      25,
 	}
 
-	result, _ := v.Validate(validData)
-	fmt.Printf("Valid map result: %v\n", result.IsValid())
+	err := v.Validate(validData)
+	fmt.Printf("Valid map result: %v\n", err == nil)
 
 	// Invalid map data
-	invalidData := map[string]interface{}{
+	invalidData := map[string]any{
 		"email":    "invalid-email",
 		"password": "short",
 		"age":      150,
 	}
 
-	result, _ = v.Validate(invalidData)
-	fmt.Printf("Invalid map result: %v\n", result.IsValid())
-	for _, err := range result.Errors() {
-		fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
+	err = v.Validate(invalidData)
+	fmt.Printf("Invalid map result: %v\n", err == nil)
+	if err != nil {
+		res, ok := err.(*sverrors.ValidationResult)
+		if ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  - %s: %s (params: %v)\n", e.FieldPath, e.ErrorCode, e.Params)
+			}
+		} else {
+			fmt.Printf("  - %v\n", err)
+		}
 	}
 
 	fmt.Println()
@@ -115,7 +129,7 @@ func example3() {
 		Address
 	}
 
-	v, _ := validator.NewFromStruct(Person{})
+	v, _ := validator.New(Person{})
 
 	// Valid person
 	validPerson := Person{
@@ -128,8 +142,8 @@ func example3() {
 		},
 	}
 
-	result, _ := v.Validate(validPerson)
-	fmt.Printf("Valid person result: %v\n", result.IsValid())
+	err := v.Validate(validPerson)
+	fmt.Printf("Valid person result: %v\n", err == nil)
 
 	// Invalid person - missing embedded field
 	invalidPerson := Person{
@@ -141,10 +155,17 @@ func example3() {
 		},
 	}
 
-	result, _ = v.Validate(invalidPerson)
-	fmt.Printf("Invalid person result: %v\n", result.IsValid())
-	for _, err := range result.Errors() {
-		fmt.Printf("  - %s: %s\n", err.FieldPath, err.ErrorCode)
+	err = v.Validate(invalidPerson)
+	fmt.Printf("Invalid person result: %v\n", err == nil)
+	if err != nil {
+		res, ok := err.(*sverrors.ValidationResult)
+		if ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  - %s: %s\n", e.FieldPath, e.ErrorCode)
+			}
+		} else {
+			fmt.Printf("  - %v\n", err)
+		}
 	}
 
 	fmt.Println()
@@ -154,7 +175,7 @@ func example3() {
 func example4() {
 	fmt.Println("=== Example 4: Array Validation ===")
 
-	itemSchema := schema.Field().AddValidator(validation.MinLength(1)).Build()
+	itemSchema := schema.Field().AddValidator("min_length", "1").Build()
 
 	arraySchema := schema.Array(itemSchema).
 		MinItems(1).
@@ -165,36 +186,50 @@ func example4() {
 		Field("items", arraySchema).
 		Build()
 
-	v := validator.New(listSchema)
+	v := validator.NewFromSchema(listSchema)
 
 	// Valid list
-	validList := map[string]interface{}{
+	validList := map[string]any{
 		"items": []string{"item1", "item2", "item3"},
 	}
 
-	result, _ := v.Validate(validList)
-	fmt.Printf("Valid list result: %v\n", result.IsValid())
+	err := v.Validate(validList)
+	fmt.Printf("Valid list result: %v\n", err == nil)
 
 	// Invalid - empty array
-	invalidList := map[string]interface{}{
+	invalidList := map[string]any{
 		"items": []string{},
 	}
 
-	result, _ = v.Validate(invalidList)
-	fmt.Printf("Invalid list result (empty): %v\n", result.IsValid())
-	for _, err := range result.Errors() {
-		fmt.Printf("  - %s: %s\n", err.FieldPath, err.ErrorCode)
+	err = v.Validate(invalidList)
+	fmt.Printf("Invalid list result (empty): %v\n", err == nil)
+	if err != nil {
+		res, ok := err.(*sverrors.ValidationResult)
+		if ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  - %s: %s\n", e.FieldPath, e.ErrorCode)
+			}
+		} else {
+			fmt.Printf("  - %v\n", err)
+		}
 	}
 
 	// Invalid - too many items
-	tooManyItems := map[string]interface{}{
+	tooManyItems := map[string]any{
 		"items": []string{"1", "2", "3", "4", "5", "6"},
 	}
 
-	result, _ = v.Validate(tooManyItems)
-	fmt.Printf("Invalid list result (too many): %v\n", result.IsValid())
-	for _, err := range result.Errors() {
-		fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
+	err = v.Validate(tooManyItems)
+	fmt.Printf("Invalid list result (too many): %v\n", err == nil)
+	if err != nil {
+		res, ok := err.(*sverrors.ValidationResult)
+		if ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  - %s: %s (params: %v)\n", e.FieldPath, e.ErrorCode, e.Params)
+			}
+		} else {
+			fmt.Printf("  - %v\n", err)
+		}
 	}
 
 	fmt.Println()
@@ -209,7 +244,7 @@ func example5() {
 		ConfirmPassword string `json:"confirmPassword" validate:"required,eqfield=Password"`
 	}
 
-	v, _ := validator.NewFromStruct(PasswordForm{})
+	v, _ := validator.New(PasswordForm{})
 
 	// Valid - passwords match
 	validForm := PasswordForm{
@@ -217,8 +252,8 @@ func example5() {
 		ConfirmPassword: "securepass123",
 	}
 
-	result, _ := v.Validate(validForm)
-	fmt.Printf("Matching passwords result: %v\n", result.IsValid())
+	err := v.Validate(validForm)
+	fmt.Printf("Matching passwords result: %v\n", err == nil)
 
 	// Invalid - passwords don't match
 	invalidForm := PasswordForm{
@@ -226,10 +261,17 @@ func example5() {
 		ConfirmPassword: "different",
 	}
 
-	result, _ = v.Validate(invalidForm)
-	fmt.Printf("Non-matching passwords result: %v\n", result.IsValid())
-	for _, err := range result.Errors() {
-		fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
+	err = v.Validate(invalidForm)
+	fmt.Printf("Non-matching passwords result: %v\n", err == nil)
+	if err != nil {
+		res, ok := err.(*sverrors.ValidationResult)
+		if ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  - %s: %s (params: %v)\n", e.FieldPath, e.ErrorCode, e.Params)
+			}
+		} else {
+			fmt.Printf("  - %v\n", err)
+		}
 	}
 
 	fmt.Println()
@@ -245,7 +287,7 @@ func example6() {
 		SKU   string `json:"sku" validate:"required"`
 	}
 
-	v, _ := validator.NewFromStruct(Product{})
+	v, _ := validator.New(Product{})
 
 	invalidProduct := Product{
 		Name:  "AB",
@@ -253,32 +295,38 @@ func example6() {
 		SKU:   "",
 	}
 
-	result, _ := v.Validate(invalidProduct)
+	err := v.Validate(invalidProduct)
 
 	// Pattern 1: Check if valid
-	if !result.IsValid() {
+	if err != nil {
 		fmt.Println("Product validation failed!")
 
 		// Pattern 2: Iterate all errors
 		fmt.Println("\nAll errors:")
-		for _, err := range result.Errors() {
-			fmt.Printf("  %s: %s %v\n", err.FieldPath, err.ErrorCode, err.Params)
+		if res, ok := err.(*sverrors.ValidationResult); ok {
+			for _, e := range res.Errors() {
+				fmt.Printf("  %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+			}
+		} else {
+			fmt.Printf("  %v\n", err)
 		}
 
 		// Pattern 3: Group by field
 		fmt.Println("\nErrors by field:")
-		errorsByField := result.ErrorsByField()
-		for field, errs := range errorsByField {
-			fmt.Printf("  %s: ", field)
-			for _, err := range errs {
-				fmt.Printf("%s ", err.ErrorCode)
+		if res, ok := err.(*sverrors.ValidationResult); ok {
+			errorsByField := res.ErrorsByField()
+			for field, errs := range errorsByField {
+				fmt.Printf("  %s: ", field)
+				for _, e := range errs {
+					fmt.Printf("%s ", e.ErrorCode)
+				}
+				fmt.Println()
 			}
-			fmt.Println()
-		}
 
-		// Pattern 4: Get first error
-		firstErr := result.FirstError()
-		fmt.Printf("\nFirst error: %s - %s\n", firstErr.FieldPath, firstErr.ErrorCode)
+			// Pattern 4: Get first error
+			firstErr := res.FirstError()
+			fmt.Printf("\nFirst error: %s - %s\n", firstErr.FieldPath, firstErr.ErrorCode)
+		}
 	}
 
 	fmt.Println()

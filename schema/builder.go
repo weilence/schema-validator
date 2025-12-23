@@ -1,7 +1,7 @@
 package schema
 
 import (
-	"github.com/weilence/schema-validator/validation"
+	"fmt"
 )
 
 // FieldSchemaBuilder provides fluent API for building field schemas
@@ -18,25 +18,19 @@ func Field() *FieldSchemaBuilder {
 
 // Required marks the field as required
 func (b *FieldSchemaBuilder) Required() *FieldSchemaBuilder {
-	b.schema.SetOptional(false)
+	b.schema.AddValidator("required")
 	return b
 }
 
 // Optional marks the field as optional
 func (b *FieldSchemaBuilder) Optional() *FieldSchemaBuilder {
-	b.schema.SetOptional(true)
-	return b
-}
-
-// SetOptional sets the optional flag
-func (b *FieldSchemaBuilder) SetOptional(optional bool) *FieldSchemaBuilder {
-	b.schema.SetOptional(optional)
+	b.schema.RemoveValidator("required")
 	return b
 }
 
 // AddValidator adds a custom validator
-func (b *FieldSchemaBuilder) AddValidator(validator validation.FieldValidator) *FieldSchemaBuilder {
-	b.schema.AddValidator(validator)
+func (b *FieldSchemaBuilder) AddValidator(name string, params ...string) *FieldSchemaBuilder {
+	b.schema.AddValidator(name, params...)
 	return b
 }
 
@@ -60,20 +54,20 @@ func Array(elementSchema Schema) *ArraySchemaBuilder {
 // MinItems sets minimum items constraint
 func (b *ArraySchemaBuilder) MinItems(min int) *ArraySchemaBuilder {
 	b.schema.SetMinItems(min)
-	b.schema.AddValidator(&validation.MinItemsValidator{MinItems: min})
+	b.schema.AddValidator("min_items", fmt.Sprint(min))
 	return b
 }
 
 // MaxItems sets maximum items constraint
 func (b *ArraySchemaBuilder) MaxItems(max int) *ArraySchemaBuilder {
 	b.schema.SetMaxItems(max)
-	b.schema.AddValidator(&validation.MaxItemsValidator{MaxItems: max})
+	b.schema.AddValidator("max_items", fmt.Sprint(max))
 	return b
 }
 
 // AddValidator adds a custom array validator
-func (b *ArraySchemaBuilder) AddValidator(validator validation.ArrayValidator) *ArraySchemaBuilder {
-	b.schema.AddValidator(validator)
+func (b *ArraySchemaBuilder) AddValidator(name string, params ...string) *ArraySchemaBuilder {
+	b.schema.AddValidator(name, params...)
 	return b
 }
 
@@ -100,21 +94,20 @@ func (b *ObjectSchemaBuilder) Field(name string, fieldSchema Schema) *ObjectSche
 	return b
 }
 
-// Strict enables strict mode (disallow unknown fields)
-func (b *ObjectSchemaBuilder) Strict() *ObjectSchemaBuilder {
-	b.schema.SetStrict(true)
-	return b
-}
-
-// CrossField adds a cross-field validator
-func (b *ObjectSchemaBuilder) CrossField(validator validation.ObjectValidator) *ObjectSchemaBuilder {
-	b.schema.AddValidator(validator)
+func (b *ObjectSchemaBuilder) FieldName(name string, fieldName string) *ObjectSchemaBuilder {
+	b.schema.AddFieldName(name, fieldName)
 	return b
 }
 
 // AddValidator adds a custom object validator
-func (b *ObjectSchemaBuilder) AddValidator(validator validation.ObjectValidator) *ObjectSchemaBuilder {
-	b.schema.AddValidator(validator)
+func (b *ObjectSchemaBuilder) AddValidator(name string, params ...string) *ObjectSchemaBuilder {
+	b.schema.AddValidator(name, params...)
+	return b
+}
+
+// AddValidatorByName adds a validator by name from the global registry
+func (b *ObjectSchemaBuilder) AddValidatorByName(name string, params ...string) *ObjectSchemaBuilder {
+	b.schema.AddValidator(name, params...)
 	return b
 }
 

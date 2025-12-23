@@ -2,99 +2,159 @@ package tags
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/weilence/schema-validator/schema"
 )
 
-// ParseStructTags parses struct tags and builds an ObjectSchema
-func ParseStructTags(typ reflect.Type) (*schema.ObjectSchema, error) {
-	return ParseStructTagsWithRegistry(typ, DefaultRegistry())
+type ParseConfig struct {
+	registry *schema.Registry
+
+	ruleSplitter       rune
+	nameParamSeparator rune
+	paramsSeparator    rune
+	diveTag            string
 }
 
-// ParseStructTagsWithRegistry parses struct tags with a custom registry
-func ParseStructTagsWithRegistry(typ reflect.Type, registry *Registry) (*schema.ObjectSchema, error) {
+func defaultParseConfig() *ParseConfig {
+	return &ParseConfig{
+		registry:           schema.DefaultRegistry(),
+		ruleSplitter:       ',',
+		nameParamSeparator: '=',
+		paramsSeparator:    ':',
+		diveTag:            "dive",
+	}
+}
+
+type ParseOption func(*ParseConfig)
+
+func WithRegistry(registry *schema.Registry) ParseOption {
+	return func(cfg *ParseConfig) {
+		cfg.registry = registry
+	}
+}
+
+func WithRuleSplitter(r rune) ParseOption {
+	return func(cfg *ParseConfig) {
+		cfg.ruleSplitter = r
+	}
+}
+
+func WithNameParamSeparator(r rune) ParseOption {
+	return func(cfg *ParseConfig) {
+		cfg.nameParamSeparator = r
+	}
+}
+
+func WithParamsSeparator(r rune) ParseOption {
+	return func(cfg *ParseConfig) {
+		cfg.paramsSeparator = r
+	}
+}
+
+func WithDiveTag(tag string) ParseOption {
+	return func(cfg *ParseConfig) {
+		cfg.diveTag = tag
+	}
+}
+
+// Parse parses struct tags and builds an ObjectSchema
+func Parse(rt reflect.Type, opts ...ParseOption) (*schema.ObjectSchema, error) {
+	cfg := defaultParseConfig()
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	return parse(rt, cfg)
+}
+
+func parse(rt reflect.Type, cfg *ParseConfig) (*schema.ObjectSchema, error) {
+
+	if rt.Kind() == reflect.Pointer {
+		rt = rt.Elem()
+	}
+
 	objSchema := schema.NewObjectSchema()
-
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-
-		// Skip unexported fields (unless embedded)
-		if !field.Anonymous && field.PkgPath != "" {
-			continue
-		}
-
-		// Handle embedded structs
-		if field.Anonymous {
-			fieldType := field.Type
-			if fieldType.Kind() == reflect.Ptr {
-				fieldType = fieldType.Elem()
-			}
-
-			if fieldType.Kind() == reflect.Struct {
-				// Parse embedded struct and merge fields
-				embeddedSchema, err := ParseStructTagsWithRegistry(fieldType, registry)
-				if err != nil {
-					return nil, err
-				}
-
-				// Merge embedded fields into parent
-				for _, fieldName := range embeddedSchema.Fields() {
-					if fieldSchema, ok := embeddedSchema.GetField(fieldName); ok {
-						objSchema.AddField(fieldName, fieldSchema)
-					}
-				}
-				continue
-			}
-		}
-
-		// Get field name
-		fieldName := getFieldName(field)
-		if fieldName == "" || fieldName == "-" {
-			continue
-		}
-
-		// Parse validation tag
-		validateTag := field.Tag.Get("validate")
-		if validateTag == "" || validateTag == "-" {
-			// No validation, add optional field schema
-			objSchema.AddField(fieldName, schema.NewFieldSchema().SetOptional(true))
-			continue
-		}
-
-		// Parse field schema from tag
-		fieldSchema, err := parseFieldTag(field.Type, validateTag, registry)
-		if err != nil {
+	for i := 0; i < rt.NumField(); i++ {
+		field := rt.Field(i)
+		if err := parseStructField(objSchema, field, cfg); err != nil {
 			return nil, err
 		}
-
-		objSchema.AddField(fieldName, fieldSchema)
 	}
 
 	return objSchema, nil
 }
 
-func parseFieldTag(fieldType reflect.Type, tag string, registry *Registry) (schema.Schema, error) {
+func parseStructField(schema *schema.ObjectSchema, field reflect.StructField, cfg *ParseConfig) error {
+	fieldType := field.Type
+	if fieldType.Kind() == reflect.Pointer {
+		fieldType = fieldType.Elem()
+	}
+
+	if field.Anonymous {
+		if fieldType.Kind() != reflect.Struct {
+			return nil
+		}
+
+		for i := 0; i < fieldType.NumField(); i++ {
+			embeddedField := fieldType.Field(i)
+			if err := parseStructField(schema, embeddedField, cfg); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	if !field.IsExported() {
+		return nil
+	}
+
+	fieldName := getFieldName(field)
+	validateTag := field.Tag.Get("validate")
+	if validateTag == "-" {
+		return nil
+	}
+
+	tags := parseTag(validateTag, cfg)
+	fieldSchema, err := parseField(field.Type, tags, cfg)
+	if err != nil {
+		return err
+	}
+
+	schema.AddField(fieldName, fieldSchema).AddFieldName(fieldName, field.Name)
+	return nil
+}
+
+func parseField(fieldType reflect.Type, tags []TagRule, cfg *ParseConfig) (schema.Schema, error) {
+	if fieldType.Kind() == reflect.Pointer {
+		fieldType = fieldType.Elem()
+	}
+
 	// Handle slice/array types
 	if fieldType.Kind() == reflect.Slice || fieldType.Kind() == reflect.Array {
+		// Parse array-specific validators
+		diveRuleInex := slices.IndexFunc(tags, func(item TagRule) bool { return item.Name == cfg.diveTag })
+		var arrayTags, itemTags []TagRule
+		if diveRuleInex >= 0 {
+			arrayTags = tags[:diveRuleInex]
+			itemTags = tags[diveRuleInex+1:]
+		} else {
+			arrayTags = tags
+		}
+
 		elemType := fieldType.Elem()
-		elemSchema, err := parseFieldTag(elemType, tag, registry)
+
+		elemSchema, err := parseField(elemType, itemTags, cfg)
 		if err != nil {
 			return nil, err
 		}
 
 		arraySchema := schema.NewArraySchema(elemSchema)
 
-		// Parse array-specific validators
-		rules := parseTag(tag)
-		for _, rule := range rules {
-			validator, err := registry.GetArrayValidator(rule.Name, rule.Param)
-			if err != nil {
-				return nil, err
-			}
-			if validator != nil {
-				arraySchema.AddValidator(validator)
-			}
+		for _, rule := range arrayTags {
+			arraySchema.AddValidator(rule.Name, rule.Params...)
 		}
 
 		return arraySchema, nil
@@ -103,7 +163,7 @@ func parseFieldTag(fieldType reflect.Type, tag string, registry *Registry) (sche
 	// Handle struct types
 	if fieldType.Kind() == reflect.Struct {
 		// Recursively parse nested struct
-		return ParseStructTagsWithRegistry(fieldType, registry)
+		return parse(fieldType, cfg)
 	}
 
 	// Handle map types
@@ -114,29 +174,8 @@ func parseFieldTag(fieldType reflect.Type, tag string, registry *Registry) (sche
 
 	// Primitive field
 	fieldSchema := schema.NewFieldSchema()
-
-	// Parse validation rules
-	rules := parseTag(tag)
-
-	hasRequired := false
-	for _, rule := range rules {
-		if rule.Name == "required" {
-			hasRequired = true
-			fieldSchema.SetOptional(false)
-		}
-
-		validator, err := registry.GetFieldValidator(rule.Name, rule.Param)
-		if err != nil {
-			return nil, err
-		}
-
-		if validator != nil {
-			fieldSchema.AddValidator(validator)
-		}
-	}
-
-	if !hasRequired {
-		fieldSchema.SetOptional(true)
+	for _, tag := range tags {
+		fieldSchema.AddValidator(tag.Name, tag.Params...)
 	}
 
 	return fieldSchema, nil
@@ -144,15 +183,15 @@ func parseFieldTag(fieldType reflect.Type, tag string, registry *Registry) (sche
 
 // TagRule represents a parsed validation rule
 type TagRule struct {
-	Name  string
-	Param string
+	Name   string
+	Params []string
 }
 
 // parseTag parses a validation tag into rules
-// Example: "required,min=5,max=100" -> [{required, ""}, {min, "5"}, {max, "100"}]
-// For multi-param: "between=10:100" -> [{between, "10:100"}]
-// The params will be split later in the registry
-func parseTag(tag string) []TagRule {
+// Example: "required,min=5,max=100" -> [{required, []}, {min, ["5"]}, {max, ["100"]}]
+// For multi-param: "between=10:100" -> [{between, ["10","100"]}]
+// The params are split here into a slice
+func parseTag(tag string, cfg *ParseConfig) []TagRule {
 	if tag == "" {
 		return nil
 	}
@@ -168,38 +207,38 @@ func parseTag(tag string) []TagRule {
 	for i := 0; i < len(tag); i++ {
 		ch := tag[i]
 
-		if ch == '=' {
+		if ch == byte(cfg.nameParamSeparator) {
 			inParam = true
 			currentRule += string(ch)
-		} else if ch == ',' {
+		} else if ch == byte(cfg.ruleSplitter) {
 			// Check if we're in a parameter value
 			// Look ahead to see if there's another '=' before the next ','
 			if inParam {
 				// Check if the next part looks like a new rule (contains '=') or is just a param
 				nextPart := ""
 				for j := i + 1; j < len(tag); j++ {
-					if tag[j] == ',' {
+					if tag[j] == byte(cfg.ruleSplitter) {
 						break
 					}
 					nextPart += string(tag[j])
 				}
 
 				// If nextPart doesn't contain '=' and doesn't look like a rule name, it's a parameter
-				if !strings.Contains(nextPart, "=") && !isValidatorName(nextPart) {
+				if !slices.Contains([]byte(nextPart), byte(cfg.nameParamSeparator)) && !isValidatorName(nextPart) {
 					// This comma is part of the parameter
 					currentRule += string(ch)
 				} else {
 					// This comma ends the current rule
 					inParam = false
 					if currentRule != "" {
-						rules = append(rules, parseRule(currentRule))
+						rules = append(rules, parseRule(currentRule, cfg))
 						currentRule = ""
 					}
 				}
 			} else {
 				// Not in a parameter, this comma separates rules
 				if currentRule != "" {
-					rules = append(rules, parseRule(currentRule))
+					rules = append(rules, parseRule(currentRule, cfg))
 					currentRule = ""
 				}
 			}
@@ -210,26 +249,38 @@ func parseTag(tag string) []TagRule {
 
 	// Don't forget the last rule
 	if currentRule != "" {
-		rules = append(rules, parseRule(currentRule))
+		rules = append(rules, parseRule(currentRule, cfg))
 	}
 
 	return rules
 }
 
 // parseRule parses a single rule string like "min=5" or "required"
-func parseRule(ruleStr string) TagRule {
+func parseRule(ruleStr string, cfg *ParseConfig) TagRule {
 	ruleStr = strings.TrimSpace(ruleStr)
 
-	if idx := strings.Index(ruleStr, "="); idx != -1 {
+	if before, after, ok := strings.Cut(ruleStr, string(cfg.nameParamSeparator)); ok {
+		name := strings.TrimSpace(before)
+		raw := strings.TrimSpace(after)
+		// split params by paramsSeparator into slice
+		parts := []string{}
+		if raw != "" {
+			for _, p := range strings.Split(raw, string(cfg.paramsSeparator)) {
+				tp := strings.TrimSpace(p)
+				if tp != "" {
+					parts = append(parts, tp)
+				}
+			}
+		}
 		return TagRule{
-			Name:  strings.TrimSpace(ruleStr[:idx]),
-			Param: strings.TrimSpace(ruleStr[idx+1:]),
+			Name:   name,
+			Params: parts,
 		}
 	}
 
 	return TagRule{
-		Name:  ruleStr,
-		Param: "",
+		Name:   ruleStr,
+		Params: []string{},
 	}
 }
 

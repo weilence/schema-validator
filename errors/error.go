@@ -11,13 +11,13 @@ type ValidationError struct {
 	ErrorCode string
 
 	// Params contains additional error parameters (e.g., min value, field name)
-	Params map[string]interface{}
+	Params map[string]any
 }
 
 // NewValidationError creates a new validation error
-func NewValidationError(path, code string, params map[string]interface{}) *ValidationError {
+func NewValidationError(path, code string, params map[string]any) *ValidationError {
 	if params == nil {
-		params = make(map[string]interface{})
+		params = make(map[string]any)
 	}
 	return &ValidationError{
 		FieldPath: path,

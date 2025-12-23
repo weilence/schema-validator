@@ -1,73 +1,84 @@
 package data
 
 import (
-	"errors"
+	"fmt"
 	"reflect"
-
-	reflectutil "github.com/weilence/schema-validator/reflect"
 )
 
 type structAccessor struct {
-	value      reflect.Value
-	structInfo *reflectutil.StructInfo
+	value reflect.Value
+
+	embedValues []*structAccessor
 }
 
-func newStructAccessor(v reflect.Value) *structAccessor {
+func NewStructAccessor(v reflect.Value) *structAccessor {
+	if v.Kind() == reflect.Pointer {
+		v = v.Elem()
+	}
+
+	var embedValues []*structAccessor
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Type().Field(i)
+		if field.Anonymous {
+			embedField := v.Field(i)
+			if embedField.Kind() == reflect.Pointer && !embedField.IsNil() {
+				embedField = embedField.Elem()
+			}
+
+			if embedField.Kind() == reflect.Struct {
+				embedValues = append(embedValues, NewStructAccessor(embedField))
+			}
+		}
+	}
+
 	return &structAccessor{
-		value:      v,
-		structInfo: reflectutil.GetStructInfo(v.Type()),
+		value:       v,
+		embedValues: embedValues,
 	}
 }
 
-// Kind returns KindObject
-func (s *structAccessor) Kind() DataKind {
-	return KindObject
+func (s *structAccessor) Raw() any {
+	return s.value.Interface()
 }
 
-// IsNil always returns false for structs
-func (s *structAccessor) IsNil() bool {
-	return !s.value.IsValid()
-}
+// TODO: resolve conflict with embedded fields in same name
+func (s *structAccessor) GetValue(path string) (*Value, error) {
+	if path == "" {
+		return nil, fmt.Errorf("empty path")
+	}
 
-// AsField returns error
-func (s *structAccessor) AsField() (FieldAccessor, error) {
-	return nil, errors.New("struct is not a field")
-}
+	fieldName, nextPath := cutPath(path)
 
-// AsObject returns itself
-func (s *structAccessor) AsObject() (ObjectAccessor, error) {
-	return s, nil
-}
+	fieldAcc, err := s.GetField(fieldName)
+	if err != nil {
+		return nil, err
+	}
 
-// AsArray returns error
-func (s *structAccessor) AsArray() (ArrayAccessor, error) {
-	return nil, errors.New("struct is not an array")
+	return fieldAcc.GetValue(nextPath)
 }
 
 // GetField returns field by name (supports embedded fields)
-func (s *structAccessor) GetField(name string) (Accessor, bool) {
-	// Use cached struct info to find field (including embedded)
-	fieldInfo, ok := s.structInfo.GetField(name)
-	if !ok {
-		return nil, false
+func (s *structAccessor) GetField(name string) (Accessor, error) {
+	v := s.value.FieldByName(name)
+	if v != (reflect.Value{}) {
+		return NewAccessor(v), nil
 	}
 
-	// Access field value using reflection (handles embedded & private)
-	fieldValue := fieldInfo.GetValue(s.value)
-
-	if !fieldValue.IsValid() {
-		return nil, false
+	// Check embedded structs
+	for _, embed := range s.embedValues {
+		if fieldAcc, err := embed.GetField(name); err == nil {
+			return fieldAcc, nil
+		}
 	}
 
-	return NewValue(fieldValue.Interface()), true
+	return nil, fmt.Errorf("field %s not found", name)
 }
 
-// Fields returns all field names
-func (s *structAccessor) Fields() []string {
-	return s.structInfo.FieldNames()
-}
+func (s *structAccessor) Accessors() []ObjectAccessor {
+	accessors := []ObjectAccessor{s}
+	for _, embed := range s.embedValues {
+		accessors = append(accessors, embed.Accessors()...)
+	}
 
-// Len returns number of fields
-func (s *structAccessor) Len() int {
-	return len(s.structInfo.FieldNames())
+	return accessors
 }

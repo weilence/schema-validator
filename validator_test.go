@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	validator "github.com/weilence/schema-validator"
+	sverrors "github.com/weilence/schema-validator/errors"
 	"github.com/weilence/schema-validator/schema"
-	"github.com/weilence/schema-validator/validation"
 )
 
 // Test 1: Tag-based validation
@@ -13,11 +13,11 @@ func TestTagBasedValidation(t *testing.T) {
 	type User struct {
 		Email    string `json:"email" validate:"required,email"`
 		Password string `json:"password" validate:"required,min_length=8"`
-		Confirm  string `json:"confirm" validate:"required,eqfield=password"`
+		Confirm  string `json:"confirm" validate:"required,eqfield=Password"`
 		Age      int    `json:"age" validate:"min=18,max=120"`
 	}
 
-	v, err := validator.NewFromStruct(User{})
+	v, err := validator.New(User{})
 	if err != nil {
 		t.Fatalf("Failed to create validator: %v", err)
 	}
@@ -30,13 +30,9 @@ func TestTagBasedValidation(t *testing.T) {
 		Age:      25,
 	}
 
-	result, err := v.Validate(validUser)
+	err = v.Validate(validUser)
 	if err != nil {
 		t.Fatalf("Validation failed: %v", err)
-	}
-
-	if !result.IsValid() {
-		t.Errorf("Expected valid user, got errors: %v", result.Errors())
 	}
 
 	// Invalid user - password mismatch
@@ -47,17 +43,22 @@ func TestTagBasedValidation(t *testing.T) {
 		Age:      25,
 	}
 
-	result, err = v.Validate(invalidUser)
-	if err != nil {
-		t.Fatalf("Validation failed: %v", err)
-	}
-
-	if result.IsValid() {
+	err = v.Validate(invalidUser)
+	if err == nil {
 		t.Error("Expected validation errors for password mismatch")
-	}
-
-	if !result.HasFieldError("confirm") {
-		t.Error("Expected error on confirm field")
+	} else {
+		switch e := err.(type) {
+		case *sverrors.ValidationResult:
+			if !e.HasFieldError("confirm") {
+				t.Error("Expected error on confirm field")
+			}
+		case *sverrors.ValidationError:
+			if e.FieldPath != "confirm" {
+				t.Errorf("Expected error on confirm field, got %s", e.FieldPath)
+			}
+		default:
+			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
+		}
 	}
 
 	// Invalid user - missing required field
@@ -68,64 +69,70 @@ func TestTagBasedValidation(t *testing.T) {
 		Age:      25,
 	}
 
-	result, err = v.Validate(invalidUser2)
-	if err != nil {
-		t.Fatalf("Validation failed: %v", err)
-	}
-
-	if result.IsValid() {
+	err = v.Validate(invalidUser2)
+	if err == nil {
 		t.Error("Expected validation errors for missing email")
-	}
-
-	if !result.HasFieldError("email") {
-		t.Error("Expected error on email field")
+	} else {
+		switch e := err.(type) {
+		case *sverrors.ValidationResult:
+			if !e.HasFieldError("email") {
+				t.Error("Expected error on email field")
+			}
+		case *sverrors.ValidationError:
+			if e.FieldPath != "email" {
+				t.Errorf("Expected error on email field, got %s", e.FieldPath)
+			}
+		default:
+			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
+		}
 	}
 }
 
 // Test 2: Code-based validation
 func TestCodeBasedValidation(t *testing.T) {
 	userSchema := schema.Object().
-		Field("email", schema.Field().AddValidator(validation.Required()).AddValidator(validation.Email()).Build()).
-		Field("password", schema.Field().AddValidator(validation.Required()).AddValidator(validation.MinLength(8)).Build()).
-		Field("age", schema.Field().AddValidator(validation.Min(18)).AddValidator(validation.Max(120)).Build()).
+		Field("email", schema.Field().AddValidator("required").AddValidator("email").Build()).
+		Field("password", schema.Field().AddValidator("required").AddValidator("min_length", "8").Build()).
+		Field("age", schema.Field().AddValidator("min", "18").AddValidator("max", "120").Build()).
 		Build()
 
-	v := validator.New(userSchema)
+	v := validator.NewFromSchema(userSchema)
 
 	// Valid data (map)
-	validData := map[string]interface{}{
+	validData := map[string]any{
 		"email":    "test@example.com",
 		"password": "password123",
 		"age":      25,
 	}
 
-	result, err := v.Validate(validData)
+	err := v.Validate(validData)
 	if err != nil {
 		t.Fatalf("Validation failed: %v", err)
 	}
 
-	if !result.IsValid() {
-		t.Errorf("Expected valid data, got errors: %v", result.Errors())
-	}
-
 	// Invalid data - invalid email
-	invalidData := map[string]interface{}{
+	invalidData := map[string]any{
 		"email":    "not-an-email",
 		"password": "password123",
 		"age":      25,
 	}
 
-	result, err = v.Validate(invalidData)
-	if err != nil {
-		t.Fatalf("Validation failed: %v", err)
-	}
-
-	if result.IsValid() {
+	err = v.Validate(invalidData)
+	if err == nil {
 		t.Error("Expected validation errors for invalid email")
-	}
-
-	if !result.HasFieldError("email") {
-		t.Error("Expected error on email field")
+	} else {
+		switch e := err.(type) {
+		case *sverrors.ValidationResult:
+			if !e.HasFieldError("email") {
+				t.Error("Expected error on email field")
+			}
+		case *sverrors.ValidationError:
+			if e.FieldPath != "email" {
+				t.Errorf("Expected error on email field, got %s", e.FieldPath)
+			}
+		default:
+			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
+		}
 	}
 }
 
@@ -141,7 +148,7 @@ func TestEmbeddedStructWithPrivateFields(t *testing.T) {
 		Address
 	}
 
-	v, err := validator.NewFromStruct(Person{})
+	v, err := validator.New(Person{})
 	if err != nil {
 		t.Fatalf("Failed to create validator: %v", err)
 	}
@@ -155,13 +162,9 @@ func TestEmbeddedStructWithPrivateFields(t *testing.T) {
 		},
 	}
 
-	result, err := v.Validate(validPerson)
+	err = v.Validate(validPerson)
 	if err != nil {
 		t.Fatalf("Validation failed: %v", err)
-	}
-
-	if !result.IsValid() {
-		t.Errorf("Expected valid person, got errors: %v", result.Errors())
 	}
 
 	// Invalid person - missing embedded field
@@ -172,17 +175,22 @@ func TestEmbeddedStructWithPrivateFields(t *testing.T) {
 		},
 	}
 
-	result, err = v.Validate(invalidPerson)
-	if err != nil {
-		t.Fatalf("Validation failed: %v", err)
-	}
-
-	if result.IsValid() {
+	err = v.Validate(invalidPerson)
+	if err == nil {
 		t.Error("Expected validation errors for missing street")
-	}
-
-	if !result.HasFieldError("street") {
-		t.Error("Expected error on street field")
+	} else {
+		switch e := err.(type) {
+		case *sverrors.ValidationResult:
+			if !e.HasFieldError("street") {
+				t.Error("Expected error on street field")
+			}
+		case *sverrors.ValidationError:
+			if e.FieldPath != "street" {
+				t.Errorf("Expected error on street field, got %s", e.FieldPath)
+			}
+		default:
+			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
+		}
 	}
 }
 
@@ -192,7 +200,7 @@ func TestArrayValidation(t *testing.T) {
 		Items []string `json:"items" validate:"min_items=1,max_items=10"`
 	}
 
-	v, err := validator.NewFromStruct(TodoList{})
+	v, err := validator.New(TodoList{})
 	if err != nil {
 		t.Fatalf("Failed to create validator: %v", err)
 	}
@@ -202,13 +210,9 @@ func TestArrayValidation(t *testing.T) {
 		Items: []string{"item1", "item2", "item3"},
 	}
 
-	result, err := v.Validate(validList)
+	err = v.Validate(validList)
 	if err != nil {
 		t.Fatalf("Validation failed: %v", err)
-	}
-
-	if !result.IsValid() {
-		t.Errorf("Expected valid list, got errors: %v", result.Errors())
 	}
 
 	// Invalid - empty array
@@ -216,63 +220,59 @@ func TestArrayValidation(t *testing.T) {
 		Items: []string{},
 	}
 
-	result, err = v.Validate(invalidList)
-	if err != nil {
-		t.Fatalf("Validation failed: %v", err)
-	}
-
-	if result.IsValid() {
+	err = v.Validate(invalidList)
+	if err == nil {
 		t.Error("Expected validation errors for empty array")
-	}
-
-	if !result.HasFieldError("items") {
-		t.Error("Expected error on items field")
+	} else {
+		switch e := err.(type) {
+		case *sverrors.ValidationResult:
+			if !e.HasFieldError("items") {
+				t.Error("Expected error on items field")
+			}
+		case *sverrors.ValidationError:
+			if e.FieldPath != "items" {
+				t.Errorf("Expected error on items field, got %s", e.FieldPath)
+			}
+		default:
+			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
+		}
 	}
 }
 
 // Test 5: Cross-field validation with code
 func TestCrossFieldValidationWithCode(t *testing.T) {
-	// Custom password match validator
-	passwordMatchValidator := validation.ObjectValidatorFunc(func(ctx *validation.Context) error {
-		// This would be implemented properly in a real scenario
+	// register passwordMatchValidator into registry and add by name
+	schema.Register("password", func(ctx *schema.Context, params []string) error {
 		return nil
 	})
 
 	userSchema := schema.Object().
-		Field("password", schema.Field().AddValidator(validation.Required()).AddValidator(validation.MinLength(8)).Build()).
-		Field("confirmPassword", schema.Field().AddValidator(validation.Required()).AddValidator(validation.EqField("password")).Build()).
-		CrossField(passwordMatchValidator).
+		Field("password", schema.Field().AddValidator("required").AddValidator("min_length", "8").Build()).
+		Field("confirmPassword", schema.Field().AddValidator("required").AddValidator("eqfield", "password").Build()).
+		AddValidator("password").
 		Build()
 
-	v := validator.New(userSchema)
+	v := validator.NewFromSchema(userSchema)
 
 	// Valid data
-	validData := map[string]interface{}{
+	validData := map[string]any{
 		"password":        "password123",
 		"confirmPassword": "password123",
 	}
 
-	result, err := v.Validate(validData)
+	err := v.Validate(validData)
 	if err != nil {
 		t.Fatalf("Validation failed: %v", err)
 	}
 
-	if !result.IsValid() {
-		t.Errorf("Expected valid data, got errors: %v", result.Errors())
-	}
-
 	// Invalid - password mismatch
-	invalidData := map[string]interface{}{
+	invalidData := map[string]any{
 		"password":        "password123",
 		"confirmPassword": "different",
 	}
 
-	result, err = v.Validate(invalidData)
-	if err != nil {
-		t.Fatalf("Validation failed: %v", err)
-	}
-
-	if result.IsValid() {
+	err = v.Validate(invalidData)
+	if err == nil {
 		t.Error("Expected validation errors for password mismatch")
 	}
 }
@@ -280,39 +280,203 @@ func TestCrossFieldValidationWithCode(t *testing.T) {
 // Test 6: Map validation
 func TestMapValidation(t *testing.T) {
 	userSchema := schema.Object().
-		Field("name", schema.Field().AddValidator(validation.Required()).Build()).
-		Field("age", schema.Field().AddValidator(validation.Min(0)).Build()).
+		Field("name", schema.Field().AddValidator("required").Build()).
+		Field("age", schema.Field().AddValidator("min", "0").Build()).
 		Build()
 
-	v := validator.New(userSchema)
+	v := validator.NewFromSchema(userSchema)
 
 	// Valid map
-	validMap := map[string]interface{}{
+	validMap := map[string]any{
 		"name": "John Doe",
 		"age":  30,
 	}
 
-	result, err := v.Validate(validMap)
+	err := v.Validate(validMap)
 	if err != nil {
 		t.Fatalf("Validation failed: %v", err)
 	}
 
-	if !result.IsValid() {
-		t.Errorf("Expected valid map, got errors: %v", result.Errors())
-	}
-
 	// Invalid map
-	invalidMap := map[string]interface{}{
+	invalidMap := map[string]any{
 		"name": "",
 		"age":  30,
 	}
 
-	result, err = v.Validate(invalidMap)
-	if err != nil {
-		t.Fatalf("Validation failed: %v", err)
+	err = v.Validate(invalidMap)
+	if err == nil {
+		t.Error("Expected validation errors for empty name")
+	}
+}
+
+// DynamicForm implements SchemaModifier to dynamically modify validation rules
+type DynamicForm struct {
+	Type     string `json:"type" validate:"required"`
+	Value    string `json:"value"`
+	Required bool   `json:"required"`
+}
+
+func (f DynamicForm) ModifySchema(ctx *schema.Context) {
+	// Access current object's fields
+	requiredField, _ := ctx.GetValue("Required")
+	if requiredField != nil {
+		isRequired, _ := requiredField.Bool()
+
+		// Dynamically modify "value" field validation based on required flag
+		if isRequired {
+			// Add required validation
+			valueSchema := schema.Field().
+				AddValidator("required").
+				Build()
+			ctx.Schema().(*schema.ObjectSchema).AddField("value", valueSchema)
+		} else {
+			// Make value optional (override any existing schema)
+			valueSchema := schema.Field().
+				Optional().
+				Build()
+			ctx.Schema().(*schema.ObjectSchema).AddField("value", valueSchema)
+		}
 	}
 
-	if result.IsValid() {
-		t.Error("Expected validation errors for empty name")
+	// Can also access parent context
+	if ctx.Parent() != nil {
+		// Access parent object fields if needed
+	}
+}
+
+// Test SchemaModifier interface
+func TestSchemaModifier(t *testing.T) {
+	v, err := validator.New(DynamicForm{})
+	if err != nil {
+		t.Fatalf("Failed to create validator: %v", err)
+	}
+
+	// Test case 1: required=true, value should be required
+	form1 := DynamicForm{
+		Type:     "text",
+		Value:    "", // Empty value
+		Required: true,
+	}
+
+	err = v.Validate(form1)
+	if err == nil {
+		t.Error("Expected validation to fail when required=true and value is empty")
+	} else {
+		switch e := err.(type) {
+		case *sverrors.ValidationResult:
+			if !e.HasFieldError("value") {
+				t.Error("Expected error on value field when required=true")
+			}
+		case *sverrors.ValidationError:
+			if e.FieldPath != "value" {
+				t.Errorf("Expected error on value field, got %s", e.FieldPath)
+			}
+		default:
+			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
+		}
+	}
+
+	// Test case 2: required=false, value can be empty
+	form2 := DynamicForm{
+		Type:     "text",
+		Value:    "", // Empty value
+		Required: false,
+	}
+
+	err = v.Validate(form2)
+	if err != nil {
+		t.Errorf("Expected validation to pass when required=false, got errors: %v", err)
+	}
+
+	// Test case 3: required=true, value is provided
+	form3 := DynamicForm{
+		Type:     "text",
+		Value:    "some value",
+		Required: true,
+	}
+
+	err = v.Validate(form3)
+	if err != nil {
+		t.Errorf("Expected validation to pass when required=true and value is provided, got errors: %v", err)
+	}
+}
+
+// NestedUser implements SchemaModifier to add zip code validation based on country
+type NestedUser struct {
+	Name string `json:"name" validate:"required"`
+	NestedAddress
+}
+
+func (u NestedUser) ModifySchema(ctx *schema.Context) {
+	// For embedded structs, access fields directly
+	countryField, _ := ctx.GetValue("Country")
+
+	country := countryField.String()
+
+	// Add different validation rules based on country
+	if country == "US111" {
+		// US zip codes should be 5 digits
+		zipCodeSchema := schema.Field().
+			AddValidator("min_length", "5").
+			AddValidator("max_length", "5").
+			Build()
+		ctx.Schema().(*schema.ObjectSchema).AddField("zipCode", zipCodeSchema)
+	}
+}
+
+type NestedAddress struct {
+	Country string `json:"country"`
+	ZipCode string `json:"zipCode"`
+}
+
+func (u NestedAddress) ModifySchema(ctx *schema.Context) {
+	// For embedded structs, access fields directly
+	countryField, _ := ctx.GetValue("Country")
+
+	country := countryField.String()
+
+	// Add different validation rules based on country
+	if country == "US" {
+		// US zip codes should be 5 digits
+		zipCodeSchema := schema.Field().
+			AddValidator("min_length", "5").
+			AddValidator("max_length", "5").
+			Build()
+		ctx.Schema().(*schema.ObjectSchema).AddField("country", zipCodeSchema)
+	}
+}
+
+// Test accessing nested values in SchemaModifier
+func TestSchemaModifierNestedAccess(t *testing.T) {
+	v, err := validator.New(NestedUser{})
+	if err != nil {
+		t.Fatalf("Failed to create validator: %v", err)
+	}
+
+	// Test US address with invalid zip code
+	user := NestedUser{
+		Name: "John",
+		NestedAddress: NestedAddress{
+			Country: "US111",
+			ZipCode: "123", // Too short
+		},
+	}
+
+	err = v.Validate(user)
+	if err == nil {
+		t.Error("Expected validation to fail for US zip code with length < 5")
+	}
+
+	user = NestedUser{
+		Name: "John",
+		NestedAddress: NestedAddress{
+			Country: "US", // Too short
+			ZipCode: "12345",
+		},
+	}
+
+	err = v.Validate(user)
+	if err == nil {
+		t.Error("Expected validation to fail for US zip code with length < 5")
 	}
 }

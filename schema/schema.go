@@ -1,9 +1,5 @@
 package schema
 
-import (
-	"github.com/weilence/schema-validator/validation"
-)
-
 // SchemaModifier is an interface that allows structs to modify their validation schema dynamically
 // The struct can implement this interface to add/remove validation rules based on runtime values
 type SchemaModifier interface {
@@ -12,7 +8,7 @@ type SchemaModifier interface {
 	//   - validation context (path, parent, root)
 	//   - current object's accessor (via ctx.AsObject())
 	//   - current ObjectSchema (via ctx.ObjectSchema())
-	ModifySchema(ctx *validation.Context)
+	ModifySchema(ctx *Context)
 }
 
 // SchemaType represents the type of schema
@@ -28,7 +24,7 @@ const (
 type Schema interface {
 	// Validate validates data against this schema
 	// ctx contains both the validation context and the data accessor
-	Validate(ctx *validation.Context) error
+	Validate(ctx *Context) error
 
 	// Type returns the schema type (field/array/object)
 	Type() SchemaType
