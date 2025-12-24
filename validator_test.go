@@ -11,9 +11,9 @@ import (
 // Test 1: Tag-based validation
 func TestTagBasedValidation(t *testing.T) {
 	type User struct {
-		Email    string `json:"email" validate:"required,email"`
-		Password string `json:"password" validate:"required,min_length=8"`
-		Confirm  string `json:"confirm" validate:"required,eqfield=Password"`
+		Email    string `json:"email" validate:"required|email"`
+		Password string `json:"password" validate:"required|min_length=8"`
+		Confirm  string `json:"confirm" validate:"required|eqfield=Password"`
 		Age      int    `json:"age" validate:"min=18,max=120"`
 	}
 

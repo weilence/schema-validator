@@ -31,10 +31,10 @@ import (
 )
 
 type User struct {
-    Email    string `json:"email" validate:"required,email"`
-    Password string `json:"password" validate:"required,min_length=8"`
-    Confirm  string `json:"confirm" validate:"required,eqfield=Password"`
-    Age      int    `json:"age" validate:"min=18,max=120"`
+    Email    string `json:"email" validate:"required|email"`
+    Password string `json:"password" validate:"required|min_length=8"`
+    Confirm  string `json:"confirm" validate:"required|eqfield=Password"`
+    Age      int    `json:"age" validate:"min=18|max=120"`
 }
 
 func main() {
@@ -165,7 +165,7 @@ result, _ := v.Validate(person)
 
 ```go
 type TodoList struct {
-    Items []string `json:"items" validate:"min_items=1,max_items=10"`
+    Items []string `json:"items" validate:"min_items=1|max_items=10"`
 }
 
 v, _ := validator.NewFromStruct(TodoList{})

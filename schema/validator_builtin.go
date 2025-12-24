@@ -64,7 +64,7 @@ func init() {
 		otherFieldName := params[0]
 		expectedValue := params[1]
 
-		otherValue, err := ctx.GetValue(otherFieldName)
+		otherValue, err := ctx.Parent().GetValue(otherFieldName)
 		if err != nil {
 			return fmt.Errorf("failed to get field '%s': %v", otherFieldName, err)
 		}

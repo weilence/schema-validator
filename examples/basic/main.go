@@ -13,9 +13,9 @@ func example1() {
 	fmt.Println("=== Example 1: Tag-based Validation ===")
 
 	type User struct {
-		Email    string `json:"email" validate:"required,email"`
-		Password string `json:"password" validate:"required,min_length=8"`
-		Confirm  string `json:"confirm" validate:"required,eqfield=Password"`
+		Email    string `json:"email" validate:"required|email"`
+		Password string `json:"password" validate:"required|min_length=8"`
+		Confirm  string `json:"confirm" validate:"required|eqfield=Password"`
 		Age      int    `json:"age" validate:"min=18,max=120"`
 	}
 
@@ -124,7 +124,7 @@ func example3() {
 	}
 
 	type Person struct {
-		Name string `json:"name" validate:"required,min_length=2"`
+		Name string `json:"name" validate:"required|min_length=2"`
 		Age  int    `json:"age" validate:"min=0,max=150"`
 		Address
 	}
@@ -240,8 +240,8 @@ func example5() {
 	fmt.Println("=== Example 5: Cross-field Validation ===")
 
 	type PasswordForm struct {
-		Password        string `json:"password" validate:"required,min_length=8"`
-		ConfirmPassword string `json:"confirmPassword" validate:"required,eqfield=Password"`
+		Password        string `json:"password" validate:"required|min_length=8"`
+		ConfirmPassword string `json:"confirmPassword" validate:"required|eqfield=Password"`
 	}
 
 	v, _ := validator.New(PasswordForm{})
@@ -282,8 +282,8 @@ func example6() {
 	fmt.Println("=== Example 6: Error Handling Patterns ===")
 
 	type Product struct {
-		Name  string `json:"name" validate:"required,min_length=3"`
-		Price int    `json:"price" validate:"required,min=0"`
+		Name  string `json:"name" validate:"required|min_length=3"`
+		Price int    `json:"price" validate:"required|min=0"`
 		SKU   string `json:"sku" validate:"required"`
 	}
 

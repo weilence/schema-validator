@@ -45,8 +45,8 @@ go get github.com/weilence/schema-validator
 import "github.com/weilence/schema-validator/validator"
 
 type User struct {
-    Email    string `json:"email" validate:"required,email"`
-    Password string `json:"password" validate:"required,min_length=8"`
+    Email    string `json:"email" validate:"required|email"`
+    Password string `json:"password" validate:"required|min_length=8"`
     Age      int    `json:"age" validate:"min=18,max=120"`
 }
 
@@ -149,7 +149,7 @@ type ValidationError struct {
 
 ```go
 type Product struct {
-    Name  string  `json:"name" validate:"required,min_length=3,max_length=100"`
+    Name  string  `json:"name" validate:"required|min_length=3,max_length=100"`
     Price float64 `json:"price" validate:"min=0"`
     Tags  []string `json:"tags" validate:"min_items=1,max_items=5"`
 }
@@ -188,8 +188,8 @@ v, _ := validator.NewFromStruct(Person{})
 
 ```go
 type PasswordForm struct {
-    Password string `json:"password" validate:"required,min_length=8"`
-    Confirm  string `json:"confirm" validate:"required,eqfield=password"`
+    Password string `json:"password" validate:"required|min_length=8"`
+    Confirm  string `json:"confirm" validate:"required|eqfield=password"`
 }
 ```
 

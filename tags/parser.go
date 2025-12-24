@@ -20,9 +20,9 @@ type ParseConfig struct {
 func defaultParseConfig() *ParseConfig {
 	return &ParseConfig{
 		registry:           schema.DefaultRegistry(),
-		ruleSplitter:       ',',
+		ruleSplitter:       '|',
 		nameParamSeparator: '=',
-		paramsSeparator:    ':',
+		paramsSeparator:    ',',
 		diveTag:            "dive",
 	}
 }
@@ -70,7 +70,6 @@ func Parse(rt reflect.Type, opts ...ParseOption) (*schema.ObjectSchema, error) {
 }
 
 func parse(rt reflect.Type, cfg *ParseConfig) (*schema.ObjectSchema, error) {
-
 	if rt.Kind() == reflect.Pointer {
 		rt = rt.Elem()
 	}
@@ -188,7 +187,7 @@ type TagRule struct {
 }
 
 // parseTag parses a validation tag into rules
-// Example: "required,min=5,max=100" -> [{required, []}, {min, ["5"]}, {max, ["100"]}]
+// Example: "required|min=5,max=100" -> [{required, []}, {min, ["5"]}, {max, ["100"]}]
 // For multi-param: "between=10:100" -> [{between, ["10","100"]}]
 // The params are split here into a slice
 func parseTag(tag string, cfg *ParseConfig) []TagRule {
