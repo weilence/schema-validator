@@ -97,3 +97,47 @@ func convertParams(params []string) any {
 	}
 	return out
 }
+
+func toInt64(v any) int64 {
+	switch val := v.(type) {
+	case int:
+		return int64(val)
+	case int64:
+		return val
+	case int32:
+		return int64(val)
+	case int16:
+		return int64(val)
+	case int8:
+		return int64(val)
+	default:
+		return 0
+	}
+}
+
+func parseInt(s string) int {
+	var result int
+	for i := 0; i < len(s); i++ {
+		if s[i] >= '0' && s[i] <= '9' {
+			result = result*10 + int(s[i]-'0')
+		}
+	}
+	return result
+}
+
+func parseIntOrString(s string) any {
+	// Try to parse as int
+	isNum := true
+	for i := 0; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			isNum = false
+			break
+		}
+	}
+
+	if isNum && len(s) > 0 {
+		return parseInt(s)
+	}
+
+	return s
+}

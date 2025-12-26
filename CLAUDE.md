@@ -17,15 +17,15 @@
 
 Schema Validator 是一个灵活、强大的 Go 数据验证库，提供以下核心特性：
 
-✅ **统一Schema格式** - 支持Field、Array、Object三种类型
-✅ **多数据源支持** - primitives、arrays、maps、structs
-✅ **双API模式** - struct tags 和 code-based builders
-✅ **跨字段验证** - tag语法和代码两种方式
-✅ **嵌入结构体** - 支持访问嵌入结构体的私有字段
-✅ **动态Schema** - 运行时根据数据修改验证规则
-✅ **多参数验证器** - 支持复杂自定义验证器
-✅ **Schema可视化** - ToString()方法输出JSON格式
-✅ **清晰错误报告** - 字段路径 + 错误码
+- ✅ **统一Schema格式** - 支持Field、Array、Object三种类型
+- ✅ **多数据源支持** - primitives、arrays、maps、structs
+- ✅ **双API模式** - struct tags 和 code-based builders
+- ✅ **跨字段验证** - tag语法和代码两种方式
+- ✅ **嵌入结构体** - 支持访问嵌入结构体的私有字段
+- ✅ **动态Schema** - 运行时根据数据修改验证规则
+- ✅ **多参数验证器** - 支持复杂自定义验证器
+- ✅ **Schema可视化** - ToString()方法输出JSON格式
+- ✅ **清晰错误报告** - 字段路径 + 错误码
 
 ---
 
@@ -206,7 +206,7 @@ passwordValidator := validation.ObjectValidatorFunc(
         confirmField, _ := confirm.AsField()
 
         if pwdField.String() != confirmField.String() {
-            return errors.NewValidationError(
+            return schema.NewValidationError(
                 ctx.Path() + ".confirm",
                 "password_mismatch",
                 nil,
@@ -331,7 +331,7 @@ registry.RegisterField("between", func(params []string) (validation.FieldValidat
         field, _ := ctx.AsField()
         val, _ := field.Int()
         if val < int64(min) || val > int64(max) {
-            return errors.NewValidationError(ctx.Path(), "between", map[string]interface{}{
+            return schema.NewValidationError(ctx.Path(), "between", map[string]interface{}{
                 "min": min, "max": max,
             })
         }
@@ -454,7 +454,7 @@ customValidator := validation.FieldValidatorFunc(
     func(ctx *validation.Context, value data.FieldAccessor) error {
         val := value.String()
         if !isValid(val) {
-            return errors.NewValidationError(ctx.Path, "custom_error", nil)
+            return schema.NewValidationError(ctx.Path, "custom_error", nil)
         }
         return nil
     },
@@ -474,7 +474,7 @@ crossFieldValidator := validation.ObjectValidatorFunc(
 
         // 跨字段验证逻辑
         if !isValid(field1, field2) {
-            return errors.NewValidationError(ctx.Path, "cross_field_error", nil)
+            return schema.NewValidationError(ctx.Path, "cross_field_error", nil)
         }
         return nil
     },
@@ -528,13 +528,13 @@ func New(s schema.Schema) *Validator
 func NewFromStruct(prototype interface{}) (*Validator, error)
 
 // 验证数据
-func (v *Validator) Validate(data interface{}) (*errors.ValidationResult, error)
+func (v *Validator) Validate(data interface{}) (*schema.ValidationResult, error)
 
 // 检查是否有效
 func (v *Validator) IsValid(data interface{}) bool
 
 // 验证，panic on error
-func (v *Validator) MustValidate(data interface{}) *errors.ValidationResult
+func (v *Validator) MustValidate(data interface{}) *schema.ValidationResult
 ```
 
 ### Schema Builders

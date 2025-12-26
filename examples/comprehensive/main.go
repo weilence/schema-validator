@@ -7,7 +7,6 @@ import (
 	"github.com/weilence/schema-validator/data"
 
 	validator "github.com/weilence/schema-validator"
-	"github.com/weilence/schema-validator/errors"
 	"github.com/weilence/schema-validator/schema"
 	"github.com/weilence/schema-validator/tags"
 )
@@ -88,7 +87,7 @@ func main() {
 		}
 		val, _ := ctx.Value()
 		if !allowedValues[val.String()] {
-			return errors.NewValidationError(ctx.Path(), "enum", map[string]any{
+			return schema.NewValidationError(ctx.Path(), "enum", map[string]any{
 				"allowed": params,
 			})
 		}
@@ -101,7 +100,7 @@ func main() {
 		valAcc, _ := ctx.Value()
 		val, _ := valAcc.Int()
 		if val < int64(min) || val > int64(max) {
-			return errors.NewValidationError(ctx.Path(), "between", map[string]any{
+			return schema.NewValidationError(ctx.Path(), "between", map[string]any{
 				"min": min, "max": max,
 			})
 		}
@@ -126,7 +125,7 @@ func main() {
 	err := v.Validate(validOrder)
 	fmt.Printf("Result: %v\n", err == nil)
 	if err != nil {
-		if res, ok := err.(*errors.ValidationResult); ok {
+		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
 			}
@@ -149,7 +148,7 @@ func main() {
 	err = v.Validate(invalidOrder)
 	fmt.Printf("Result: %v\n", err == nil)
 	if err != nil {
-		if res, ok := err.(*errors.ValidationResult); ok {
+		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
 			}
@@ -172,7 +171,7 @@ func main() {
 	err = v.Validate(invalidOrder2)
 	fmt.Printf("Result: %v\n", err == nil)
 	if err != nil {
-		if res, ok := err.(*errors.ValidationResult); ok {
+		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
 			}
@@ -209,7 +208,7 @@ func main() {
 	err = v.Validate(invalidOrderType)
 	fmt.Printf("Result: %v\n", err == nil)
 	if err != nil {
-		if res, ok := err.(*errors.ValidationResult); ok {
+		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
 			}
@@ -232,7 +231,7 @@ func main() {
 	err = v.Validate(belowMinQuantity)
 	fmt.Printf("Result: %v\n", err == nil)
 	if err != nil {
-		if res, ok := err.(*errors.ValidationResult); ok {
+		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
 			}

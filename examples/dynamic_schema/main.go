@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/weilence/schema-validator/data"
-	"github.com/weilence/schema-validator/errors"
 
 	validator "github.com/weilence/schema-validator"
 	"github.com/weilence/schema-validator/schema"
@@ -107,7 +106,7 @@ func main() {
 	err := v1.Validate(form1)
 	fmt.Printf("Form with required=true, empty value: %v\n", err)
 	if err != nil {
-		for _, err := range err.(*errors.ValidationResult).Errors() {
+		for _, err := range err.(*schema.ValidationResult).Errors() {
 			fmt.Printf("  - %s: %s\n", err.FieldPath, err.ErrorCode)
 		}
 	}
@@ -150,7 +149,7 @@ func main() {
 	err = v2.Validate(user2)
 	fmt.Printf("US user with invalid zipcode (123456): %v\n", err)
 	if err != nil {
-		for _, err := range err.(*errors.ValidationResult).Errors() {
+		for _, err := range err.(*schema.ValidationResult).Errors() {
 			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
 		}
 	}
@@ -177,7 +176,7 @@ func main() {
 	err = v2.Validate(user4)
 	fmt.Printf("CN user with invalid zipcode (10000): %v\n", err)
 	if err != nil {
-		for _, err := range err.(*errors.ValidationResult).Errors() {
+		for _, err := range err.(*schema.ValidationResult).Errors() {
 			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
 		}
 	}

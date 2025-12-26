@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	validator "github.com/weilence/schema-validator"
-	sverrors "github.com/weilence/schema-validator/errors"
 	"github.com/weilence/schema-validator/schema"
 )
 
@@ -48,11 +47,11 @@ func TestTagBasedValidation(t *testing.T) {
 		t.Error("Expected validation errors for password mismatch")
 	} else {
 		switch e := err.(type) {
-		case *sverrors.ValidationResult:
+		case *schema.ValidationResult:
 			if !e.HasFieldError("confirm") {
 				t.Error("Expected error on confirm field")
 			}
-		case *sverrors.ValidationError:
+		case *schema.ValidationError:
 			if e.FieldPath != "confirm" {
 				t.Errorf("Expected error on confirm field, got %s", e.FieldPath)
 			}
@@ -74,11 +73,11 @@ func TestTagBasedValidation(t *testing.T) {
 		t.Error("Expected validation errors for missing email")
 	} else {
 		switch e := err.(type) {
-		case *sverrors.ValidationResult:
+		case *schema.ValidationResult:
 			if !e.HasFieldError("email") {
 				t.Error("Expected error on email field")
 			}
-		case *sverrors.ValidationError:
+		case *schema.ValidationError:
 			if e.FieldPath != "email" {
 				t.Errorf("Expected error on email field, got %s", e.FieldPath)
 			}
@@ -122,11 +121,11 @@ func TestCodeBasedValidation(t *testing.T) {
 		t.Error("Expected validation errors for invalid email")
 	} else {
 		switch e := err.(type) {
-		case *sverrors.ValidationResult:
+		case *schema.ValidationResult:
 			if !e.HasFieldError("email") {
 				t.Error("Expected error on email field")
 			}
-		case *sverrors.ValidationError:
+		case *schema.ValidationError:
 			if e.FieldPath != "email" {
 				t.Errorf("Expected error on email field, got %s", e.FieldPath)
 			}
@@ -180,11 +179,11 @@ func TestEmbeddedStructWithPrivateFields(t *testing.T) {
 		t.Error("Expected validation errors for missing street")
 	} else {
 		switch e := err.(type) {
-		case *sverrors.ValidationResult:
+		case *schema.ValidationResult:
 			if !e.HasFieldError("street") {
 				t.Error("Expected error on street field")
 			}
-		case *sverrors.ValidationError:
+		case *schema.ValidationError:
 			if e.FieldPath != "street" {
 				t.Errorf("Expected error on street field, got %s", e.FieldPath)
 			}
@@ -225,11 +224,11 @@ func TestArrayValidation(t *testing.T) {
 		t.Error("Expected validation errors for empty array")
 	} else {
 		switch e := err.(type) {
-		case *sverrors.ValidationResult:
+		case *schema.ValidationResult:
 			if !e.HasFieldError("items") {
 				t.Error("Expected error on items field")
 			}
-		case *sverrors.ValidationError:
+		case *schema.ValidationError:
 			if e.FieldPath != "items" {
 				t.Errorf("Expected error on items field, got %s", e.FieldPath)
 			}
@@ -363,11 +362,11 @@ func TestSchemaModifier(t *testing.T) {
 		t.Error("Expected validation to fail when required=true and value is empty")
 	} else {
 		switch e := err.(type) {
-		case *sverrors.ValidationResult:
+		case *schema.ValidationResult:
 			if !e.HasFieldError("value") {
 				t.Error("Expected error on value field when required=true")
 			}
-		case *sverrors.ValidationError:
+		case *schema.ValidationError:
 			if e.FieldPath != "value" {
 				t.Errorf("Expected error on value field, got %s", e.FieldPath)
 			}

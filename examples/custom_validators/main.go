@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	validator "github.com/weilence/schema-validator"
-	"github.com/weilence/schema-validator/errors"
 	"github.com/weilence/schema-validator/schema"
 	"github.com/weilence/schema-validator/tags"
 )
@@ -42,7 +41,7 @@ func main() {
 		fieldVal, _ := ctx.Value()
 		val, _ := fieldVal.Int()
 		if val < int64(min) || val > int64(max) {
-			return errors.NewValidationError(ctx.Path(), "between", map[string]any{
+			return schema.NewValidationError(ctx.Path(), "between", map[string]any{
 				"min": min, "max": max, "actual": val,
 			})
 		}
@@ -67,7 +66,7 @@ func main() {
 	err = v.Validate(product2)
 	fmt.Printf("Product with price=5 (too low): %v\n", err)
 	if err != nil {
-		for _, err := range err.(*errors.ValidationResult).Errors() {
+		for _, err := range err.(*schema.ValidationResult).Errors() {
 			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
 		}
 	}
@@ -90,7 +89,7 @@ func main() {
 		fieldVal, _ := ctx.Value()
 		val := fieldVal.String()
 		if !allowedValues[val] {
-			return errors.NewValidationError(ctx.Path(), "enum", map[string]any{
+			return schema.NewValidationError(ctx.Path(), "enum", map[string]any{
 				"allowed": params,
 				"actual":  val,
 			})
@@ -116,7 +115,7 @@ func main() {
 	err = v2.Validate(settings2)
 	fmt.Printf("Settings with theme=blue (invalid): %v\n", err)
 	if err != nil {
-		for _, err := range err.(*errors.ValidationResult).Errors() {
+		for _, err := range err.(*schema.ValidationResult).Errors() {
 			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
 		}
 	}
@@ -139,13 +138,13 @@ func main() {
 		val, _ := fieldVal.Int()
 
 		if val < int64(min) || val > int64(max) {
-			return errors.NewValidationError(ctx.Path(), "out_of_range", map[string]any{
+			return schema.NewValidationError(ctx.Path(), "out_of_range", map[string]any{
 				"min": min, "max": max, "actual": val,
 			})
 		}
 
 		if (int(val)-min)%step != 0 {
-			return errors.NewValidationError(ctx.Path(), "invalid_step", map[string]any{
+			return schema.NewValidationError(ctx.Path(), "invalid_step", map[string]any{
 				"step": step, "actual": val,
 			})
 		}
@@ -175,7 +174,7 @@ func main() {
 	err = v3.Validate(slider3)
 	fmt.Printf("Volume=47 (invalid, not multiple of 5): %v\n", err)
 	if err != nil {
-		for _, err := range err.(*errors.ValidationResult).Errors() {
+		for _, err := range err.(*schema.ValidationResult).Errors() {
 			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
 		}
 	}
@@ -185,7 +184,7 @@ func main() {
 	err = v3.Validate(slider4)
 	fmt.Printf("Volume=105 (out of range): %v\n", err)
 	if err != nil {
-		for _, err := range err.(*errors.ValidationResult).Errors() {
+		for _, err := range err.(*schema.ValidationResult).Errors() {
 			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
 		}
 	}

@@ -4,13 +4,13 @@
 
 ## 特性
 
-✅ **统一的Schema格式** - 支持字段、数组、对象三种格式
-✅ **多种数据类型** - 支持primitives、arrays、maps、structs
-✅ **双API设计** - 同时支持struct tags和代码构建器
-✅ **跨字段校验** - tag语法和代码两种方式
-✅ **嵌入结构体支持** - 支持访问嵌入结构体的私有字段
-✅ **清晰的错误报告** - 返回字段路径 + 错误码
-✅ **可扩展** - 易于添加自定义校验器
+- ✅ **统一的Schema格式** 支持字段、数组、对象三种格式
+- ✅ **多种数据类型** 支持primitives、arrays、maps、structs
+- ✅ **双API设计** 同时支持struct tags和代码构建器
+- ✅ **跨字段校验** tag语法和代码两种方式
+- ✅ **嵌入结构体支持** 支持访问嵌入结构体的私有字段
+- ✅ **清晰的错误报告** 返回字段路径 + 错误码
+- ✅ **可扩展** 易于添加自定义校验器
 
 ## 安装
 
@@ -104,36 +104,6 @@ func main() {
 }
 ```
 
-## 支持的验证器
-
-### 字段验证器
-
-| Tag | 说明 | 示例 |
-|-----|------|------|
-| `required` | 必填 | `validate:"required"` |
-| `min` | 最小值 | `validate:"min=18"` |
-| `max` | 最大值 | `validate:"max=120"` |
-| `min_length` | 最小长度 | `validate:"min_length=8"` |
-| `max_length` | 最大长度 | `validate:"max_length=100"` |
-| `email` | 邮箱格式 | `validate:"email"` |
-| `url` | URL格式 | `validate:"url"` |
-
-### 跨字段验证器
-
-| Tag | 说明 | 示例 |
-|-----|------|------|
-| `eqfield` | 等于另一个字段 | `validate:"eqfield=Password"` |
-| `nefield` | 不等于另一个字段 | `validate:"nefield=OldPassword"` |
-| `gtfield` | 大于另一个字段 | `validate:"gtfield=StartDate"` |
-| `ltfield` | 小于另一个字段 | `validate:"ltfield=EndDate"` |
-
-### 数组验证器
-
-| Tag | 说明 | 示例 |
-|-----|------|------|
-| `min_items` | 最小元素数 | `validate:"min_items=1"` |
-| `max_items` | 最大元素数 | `validate:"max_items=10"` |
-
 ## 高级用法
 
 ### 嵌入结构体
@@ -189,7 +159,7 @@ passwordMatchValidator := validation.ObjectValidatorFunc(
         confField, _ := confirm.AsField()
 
         if pwdField.String() != confField.String() {
-            return errors.NewValidationError(
+            return schema.NewValidationError(
                 ctx.Path + ".confirmPassword",
                 "password_mismatch",
                 nil,

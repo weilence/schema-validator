@@ -2,8 +2,6 @@ package schema
 
 import (
 	"testing"
-
-	"github.com/weilence/schema-validator/errors"
 )
 
 // Test multi-parameter validator factory
@@ -31,7 +29,7 @@ func TestMultiParameterValidator(t *testing.T) {
 		}
 
 		if val < int64(min) || val > int64(max) {
-			return errors.NewValidationError(ctx.Path(), "between", map[string]any{
+			return NewValidationError(ctx.Path(), "between", map[string]any{
 				"min":    min,
 				"max":    max,
 				"actual": val,
@@ -63,7 +61,7 @@ func TestThreeParameterValidator(t *testing.T) {
 
 		val := field.String()
 		if !allowedValues[val] {
-			return errors.NewValidationError(ctx.Path(), "enum", map[string]any{
+			return NewValidationError(ctx.Path(), "enum", map[string]any{
 				"allowed": params,
 				"actual":  val,
 			})

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	validator "github.com/weilence/schema-validator"
-	sverrors "github.com/weilence/schema-validator/errors"
 	"github.com/weilence/schema-validator/schema"
 )
 
@@ -46,7 +45,7 @@ func example1() {
 	err = v.Validate(invalidUser)
 	fmt.Printf("Invalid user result: %v\n", err == nil)
 	if err != nil {
-		res, ok := err.(*sverrors.ValidationResult)
+		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  - %s: %s\n", e.FieldPath, e.ErrorCode)
@@ -100,7 +99,7 @@ func example2() {
 	err = v.Validate(invalidData)
 	fmt.Printf("Invalid map result: %v\n", err == nil)
 	if err != nil {
-		res, ok := err.(*sverrors.ValidationResult)
+		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  - %s: %s (params: %v)\n", e.FieldPath, e.ErrorCode, e.Params)
@@ -158,7 +157,7 @@ func example3() {
 	err = v.Validate(invalidPerson)
 	fmt.Printf("Invalid person result: %v\n", err == nil)
 	if err != nil {
-		res, ok := err.(*sverrors.ValidationResult)
+		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  - %s: %s\n", e.FieldPath, e.ErrorCode)
@@ -204,7 +203,7 @@ func example4() {
 	err = v.Validate(invalidList)
 	fmt.Printf("Invalid list result (empty): %v\n", err == nil)
 	if err != nil {
-		res, ok := err.(*sverrors.ValidationResult)
+		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  - %s: %s\n", e.FieldPath, e.ErrorCode)
@@ -222,7 +221,7 @@ func example4() {
 	err = v.Validate(tooManyItems)
 	fmt.Printf("Invalid list result (too many): %v\n", err == nil)
 	if err != nil {
-		res, ok := err.(*sverrors.ValidationResult)
+		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  - %s: %s (params: %v)\n", e.FieldPath, e.ErrorCode, e.Params)
@@ -264,7 +263,7 @@ func example5() {
 	err = v.Validate(invalidForm)
 	fmt.Printf("Non-matching passwords result: %v\n", err == nil)
 	if err != nil {
-		res, ok := err.(*sverrors.ValidationResult)
+		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  - %s: %s (params: %v)\n", e.FieldPath, e.ErrorCode, e.Params)
@@ -303,7 +302,7 @@ func example6() {
 
 		// Pattern 2: Iterate all errors
 		fmt.Println("\nAll errors:")
-		if res, ok := err.(*sverrors.ValidationResult); ok {
+		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
 				fmt.Printf("  %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
 			}
@@ -313,7 +312,7 @@ func example6() {
 
 		// Pattern 3: Group by field
 		fmt.Println("\nErrors by field:")
-		if res, ok := err.(*sverrors.ValidationResult); ok {
+		if res, ok := err.(*schema.ValidationResult); ok {
 			errorsByField := res.ErrorsByField()
 			for field, errs := range errorsByField {
 				fmt.Printf("  %s: ", field)
