@@ -3,6 +3,7 @@ package data
 import (
 	"fmt"
 	"reflect"
+	"unsafe"
 )
 
 type structAccessor struct {
@@ -38,7 +39,12 @@ func NewStructAccessor(v reflect.Value) *structAccessor {
 }
 
 func (s *structAccessor) Raw() any {
-	return s.value.Interface()
+	if s.value.CanInterface() {
+		return s.value.Interface()
+	}
+
+	ptr := unsafe.Pointer(s.value.UnsafeAddr())
+	return reflect.NewAt(s.value.Type(), ptr).Elem().Interface()
 }
 
 // TODO: resolve conflict with embedded fields in same name
