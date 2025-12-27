@@ -5,8 +5,9 @@ import (
 	"reflect"
 
 	validator "github.com/weilence/schema-validator"
+	"github.com/weilence/schema-validator/builder"
 	"github.com/weilence/schema-validator/schema"
-	"github.com/weilence/schema-validator/tags"
+	"github.com/weilence/schema-validator/validators"
 )
 
 // parseInt 辅助函数
@@ -24,7 +25,7 @@ func main() {
 	fmt.Println("=== Multi-Parameter Validators Examples ===")
 
 	// 创建自定义registry
-	registry := schema.NewRegistry()
+	registry := validators.NewRegistry()
 
 	// Example 1: between validator (2 parameters)
 	fmt.Println("Example 1: Between Validator (min:max)")
@@ -53,7 +54,7 @@ func main() {
 	}
 
 	typ := reflect.TypeOf(Product{})
-	objSchema, _ := tags.Parse(typ, tags.WithRegistry(registry))
+	objSchema, _ := builder.Parse(typ, builder.WithRegistry(registry))
 	v := validator.NewFromSchema(objSchema)
 
 	// Valid price
@@ -67,7 +68,7 @@ func main() {
 	fmt.Printf("Product with price=5 (too low): %v\n", err)
 	if err != nil {
 		for _, err := range err.(*schema.ValidationResult).Errors() {
-			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
+			fmt.Printf("  - %s: %s (params: %v)\n", err.Path, err.Name, err.Params)
 		}
 	}
 
@@ -102,7 +103,7 @@ func main() {
 	}
 
 	typ2 := reflect.TypeOf(Settings{})
-	objSchema2, _ := tags.Parse(typ2, tags.WithRegistry(registry))
+	objSchema2, _ := builder.Parse(typ2, builder.WithRegistry(registry))
 	v2 := validator.NewFromSchema(objSchema2)
 
 	// Valid theme
@@ -115,9 +116,7 @@ func main() {
 	err = v2.Validate(settings2)
 	fmt.Printf("Settings with theme=blue (invalid): %v\n", err)
 	if err != nil {
-		for _, err := range err.(*schema.ValidationResult).Errors() {
-			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
-		}
+		fmt.Println(err)
 	}
 	fmt.Println()
 
@@ -157,7 +156,7 @@ func main() {
 	}
 
 	typ3 := reflect.TypeOf(SliderValue{})
-	objSchema3, _ := tags.Parse(typ3, tags.WithRegistry(registry))
+	objSchema3, _ := builder.Parse(typ3, builder.WithRegistry(registry))
 	v3 := validator.NewFromSchema(objSchema3)
 
 	// Valid values (multiples of 5)
@@ -175,7 +174,7 @@ func main() {
 	fmt.Printf("Volume=47 (invalid, not multiple of 5): %v\n", err)
 	if err != nil {
 		for _, err := range err.(*schema.ValidationResult).Errors() {
-			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
+			fmt.Printf("  - %s: %s (params: %v)\n", err.Path, err.Name, err.Params)
 		}
 	}
 
@@ -185,7 +184,7 @@ func main() {
 	fmt.Printf("Volume=105 (out of range): %v\n", err)
 	if err != nil {
 		for _, err := range err.(*schema.ValidationResult).Errors() {
-			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
+			fmt.Printf("  - %s: %s (params: %v)\n", err.Path, err.Name, err.Params)
 		}
 	}
 

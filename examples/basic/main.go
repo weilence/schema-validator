@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	validator "github.com/weilence/schema-validator"
+	"github.com/weilence/schema-validator/builder"
 	"github.com/weilence/schema-validator/schema"
 )
 
@@ -13,9 +14,9 @@ func example1() {
 
 	type User struct {
 		Email    string `json:"email" validate:"required|email"`
-		Password string `json:"password" validate:"required|min_length=8"`
+		Password string `json:"password" validate:"required|min=8"`
 		Confirm  string `json:"confirm" validate:"required|eqfield=Password"`
-		Age      int    `json:"age" validate:"min=18,max=120"`
+		Age      int    `json:"age" validate:"min=18|max=120"`
 	}
 
 	v, err := validator.New(User{})
@@ -48,7 +49,7 @@ func example1() {
 		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  - %s: %s\n", e.FieldPath, e.ErrorCode)
+				fmt.Printf("  - %s: %s\n", e.Path, e.Name)
 			}
 		} else {
 			fmt.Printf("  - %v\n", err)
@@ -62,18 +63,18 @@ func example1() {
 func example2() {
 	fmt.Println("=== Example 2: Code-based Validation ===")
 
-	userSchema := schema.Object().
-		Field("email", schema.Field().
+	userSchema := builder.Object().
+		Field("email", builder.Field().
 			AddValidator("required").
 			AddValidator("email").
 			Build()).
-		Field("password", schema.Field().
+		Field("password", builder.Field().
 			AddValidator("required").
-			AddValidator("min_length", "8").
+			AddValidator("min", 8).
 			Build()).
-		Field("age", schema.Field().
-			AddValidator("min", "18").
-			AddValidator("max", "120").
+		Field("age", builder.Field().
+			AddValidator("min", 18).
+			AddValidator("max", 120).
 			Build()).
 		Build()
 
@@ -102,7 +103,7 @@ func example2() {
 		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  - %s: %s (params: %v)\n", e.FieldPath, e.ErrorCode, e.Params)
+				fmt.Printf("  - %s: %s (params: %v)\n", e.Path, e.Name, e.Params)
 			}
 		} else {
 			fmt.Printf("  - %v\n", err)
@@ -123,8 +124,8 @@ func example3() {
 	}
 
 	type Person struct {
-		Name string `json:"name" validate:"required|min_length=2"`
-		Age  int    `json:"age" validate:"min=0,max=150"`
+		Name string `json:"name" validate:"required|min=2"`
+		Age  int    `json:"age" validate:"min=0|max=150"`
 		Address
 	}
 
@@ -160,7 +161,7 @@ func example3() {
 		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  - %s: %s\n", e.FieldPath, e.ErrorCode)
+				fmt.Printf("  - %s: %s\n", e.Path, e.Name)
 			}
 		} else {
 			fmt.Printf("  - %v\n", err)
@@ -174,14 +175,14 @@ func example3() {
 func example4() {
 	fmt.Println("=== Example 4: Array Validation ===")
 
-	itemSchema := schema.Field().AddValidator("min_length", "1").Build()
+	itemSchema := builder.Field().AddValidator("min", 1).Build()
 
-	arraySchema := schema.Array(itemSchema).
-		MinItems(1).
-		MaxItems(5).
+	arraySchema := builder.Array(itemSchema).
+		AddValidator("min", 1).
+		AddValidator("max", 5).
 		Build()
 
-	listSchema := schema.Object().
+	listSchema := builder.Object().
 		Field("items", arraySchema).
 		Build()
 
@@ -206,7 +207,7 @@ func example4() {
 		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  - %s: %s\n", e.FieldPath, e.ErrorCode)
+				fmt.Printf("  - %s: %s\n", e.Path, e.Name)
 			}
 		} else {
 			fmt.Printf("  - %v\n", err)
@@ -224,7 +225,7 @@ func example4() {
 		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  - %s: %s (params: %v)\n", e.FieldPath, e.ErrorCode, e.Params)
+				fmt.Printf("  - %s: %s (params: %v)\n", e.Path, e.Name, e.Params)
 			}
 		} else {
 			fmt.Printf("  - %v\n", err)
@@ -239,7 +240,7 @@ func example5() {
 	fmt.Println("=== Example 5: Cross-field Validation ===")
 
 	type PasswordForm struct {
-		Password        string `json:"password" validate:"required|min_length=8"`
+		Password        string `json:"password" validate:"required|min=8"`
 		ConfirmPassword string `json:"confirmPassword" validate:"required|eqfield=Password"`
 	}
 
@@ -266,7 +267,7 @@ func example5() {
 		res, ok := err.(*schema.ValidationResult)
 		if ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  - %s: %s (params: %v)\n", e.FieldPath, e.ErrorCode, e.Params)
+				fmt.Printf("  - %s: %s (params: %v)\n", e.Path, e.Name, e.Params)
 			}
 		} else {
 			fmt.Printf("  - %v\n", err)
@@ -281,7 +282,7 @@ func example6() {
 	fmt.Println("=== Example 6: Error Handling Patterns ===")
 
 	type Product struct {
-		Name  string `json:"name" validate:"required|min_length=3"`
+		Name  string `json:"name" validate:"required|min=3"`
 		Price int    `json:"price" validate:"required|min=0"`
 		SKU   string `json:"sku" validate:"required"`
 	}
@@ -304,7 +305,7 @@ func example6() {
 		fmt.Println("\nAll errors:")
 		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+				fmt.Printf("  %s: %s %v\n", e.Path, e.Name, e.Params)
 			}
 		} else {
 			fmt.Printf("  %v\n", err)
@@ -317,14 +318,14 @@ func example6() {
 			for field, errs := range errorsByField {
 				fmt.Printf("  %s: ", field)
 				for _, e := range errs {
-					fmt.Printf("%s ", e.ErrorCode)
+					fmt.Printf("%s ", e.Name)
 				}
 				fmt.Println()
 			}
 
 			// Pattern 4: Get first error
 			firstErr := res.FirstError()
-			fmt.Printf("\nFirst error: %s - %s\n", firstErr.FieldPath, firstErr.ErrorCode)
+			fmt.Printf("\nFirst error: %s - %s\n", firstErr.Path, firstErr.Name)
 		}
 	}
 

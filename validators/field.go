@@ -1,11 +1,11 @@
-package schema
+package validators
 
-func init() {
-	Register("eqfield", func(ctx *Context, params []string) error {
-		if len(params) == 0 {
-			return nil
-		}
-		fieldName := params[0]
+import (
+	"github.com/weilence/schema-validator/schema"
+)
+
+func registerField(r *Registry) {
+	r.Register("eqfield", func(ctx *schema.Context, fieldName string) error {
 		currentValue, err := ctx.Value()
 		if err != nil {
 			return err
@@ -16,15 +16,11 @@ func init() {
 			return err
 		}
 		if currentValue.String() != otherValue.String() {
-			return NewValidationError(ctx.Path(), "eqfield", map[string]any{"field": fieldName})
+			return schema.NewValidationError(ctx.Path(), "eqfield", map[string]any{"field": fieldName})
 		}
 		return nil
 	})
-	Register("nefield", func(ctx *Context, params []string) error {
-		if len(params) == 0 {
-			return nil
-		}
-		fieldName := params[0]
+	r.Register("nefield", func(ctx *schema.Context, fieldName string) error {
 		otherValue, err := ctx.Parent().GetValue(fieldName)
 		if err != nil {
 			return err
@@ -34,15 +30,11 @@ func init() {
 			return err
 		}
 		if currentValue.String() == otherValue.String() {
-			return NewValidationError(ctx.Path(), "nefield", map[string]any{"field": fieldName})
+			return schema.NewValidationError(ctx.Path(), "nefield", map[string]any{"field": fieldName})
 		}
 		return nil
 	})
-	Register("gtfield", func(ctx *Context, params []string) error {
-		if len(params) == 0 {
-			return nil
-		}
-		fieldName := params[0]
+	r.Register("gtfield", func(ctx *schema.Context, fieldName string) error {
 		otherValue, err := ctx.Parent().GetValue(fieldName)
 		if err != nil {
 			return err
@@ -55,7 +47,7 @@ func init() {
 		otherVal, err2 := otherValue.Int()
 		if err1 == nil && err2 == nil {
 			if val <= otherVal {
-				return NewValidationError(ctx.Path(), "gtfield", map[string]any{"field": fieldName})
+				return schema.NewValidationError(ctx.Path(), "gtfield", map[string]any{"field": fieldName})
 			}
 			return nil
 		}
@@ -63,20 +55,16 @@ func init() {
 		fotherVal, err2 := otherValue.Float()
 		if err1 == nil && err2 == nil {
 			if fval <= fotherVal {
-				return NewValidationError(ctx.Path(), "gtfield", map[string]any{"field": fieldName})
+				return schema.NewValidationError(ctx.Path(), "gtfield", map[string]any{"field": fieldName})
 			}
 			return nil
 		}
 		if currentValue.String() <= otherValue.String() {
-			return NewValidationError(ctx.Path(), "gtfield", map[string]any{"field": fieldName})
+			return schema.NewValidationError(ctx.Path(), "gtfield", map[string]any{"field": fieldName})
 		}
 		return nil
 	})
-	Register("ltfield", func(ctx *Context, params []string) error {
-		if len(params) == 0 {
-			return nil
-		}
-		fieldName := params[0]
+	r.Register("ltfield", func(ctx *schema.Context, fieldName string) error {
 		otherValue, err := ctx.Parent().GetValue(fieldName)
 		if err != nil {
 			return err
@@ -89,7 +77,7 @@ func init() {
 		otherVal, err2 := otherValue.Int()
 		if err1 == nil && err2 == nil {
 			if val >= otherVal {
-				return NewValidationError(ctx.Path(), "ltfield", map[string]any{"field": fieldName})
+				return schema.NewValidationError(ctx.Path(), "ltfield", map[string]any{"field": fieldName})
 			}
 			return nil
 		}
@@ -97,12 +85,12 @@ func init() {
 		fotherVal, err2 := otherValue.Float()
 		if err1 == nil && err2 == nil {
 			if fval >= fotherVal {
-				return NewValidationError(ctx.Path(), "ltfield", map[string]any{"field": fieldName})
+				return schema.NewValidationError(ctx.Path(), "ltfield", map[string]any{"field": fieldName})
 			}
 			return nil
 		}
 		if currentValue.String() >= otherValue.String() {
-			return NewValidationError(ctx.Path(), "ltfield", map[string]any{"field": fieldName})
+			return schema.NewValidationError(ctx.Path(), "ltfield", map[string]any{"field": fieldName})
 		}
 		return nil
 	})

@@ -2,9 +2,9 @@ package data
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
-	"strconv"
+
+	"github.com/spf13/cast"
 )
 
 type Value struct {
@@ -23,103 +23,65 @@ func (p *Value) GetValue(path string) (*Value, error) {
 	return p, nil
 }
 
-// String returns string representation
-func (p *Value) String() string {
-	val := p.rval
-	for val.Kind() == reflect.Ptr {
-		if val.IsNil() {
-			return ""
-		}
-		val = val.Elem()
+func (p *Value) Kind() reflect.Kind {
+	if p.rval.Kind() == reflect.Interface {
+		return p.rval.Elem().Kind()
 	}
 
-	switch val.Kind() {
-	case reflect.String:
-		return val.String()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return strconv.FormatInt(val.Int(), 10)
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return strconv.FormatUint(val.Uint(), 10)
-	case reflect.Float32, reflect.Float64:
-		return strconv.FormatFloat(val.Float(), 'f', -1, 64)
-	case reflect.Bool:
-		return strconv.FormatBool(val.Bool())
-	default:
-		return fmt.Sprintf("%v", val.Interface())
+	return p.rval.Kind()
+}
+
+func (p *Value) Len() int {
+	if p.rval.Kind() == reflect.Interface {
+		return p.rval.Elem().Len()
 	}
+
+	return p.rval.Len()
+}
+
+func (p *Value) IsInt() bool {
+	kind := p.Kind()
+	return kind == reflect.Int || kind == reflect.Int8 || kind == reflect.Int16 || kind == reflect.Int32 || kind == reflect.Int64
+}
+
+func (p *Value) IsUint() bool {
+	kind := p.Kind()
+	return kind == reflect.Uint || kind == reflect.Uint8 || kind == reflect.Uint16 || kind == reflect.Uint32 || kind == reflect.Uint64
+}
+
+func (p *Value) IsFloat() bool {
+	kind := p.Kind()
+	return kind == reflect.Float32 || kind == reflect.Float64
+}
+
+// String returns string representation
+func (p *Value) String() string {
+	v, err := cast.ToStringE(p.rval.Interface())
+	if err != nil {
+		return p.rval.String()
+	}
+
+	return v
 }
 
 // Int returns int64 value
 func (p *Value) Int() (int64, error) {
-	val := p.rval
-	for val.Kind() == reflect.Ptr {
-		if val.IsNil() {
-			return 0, errors.New("nil pointer")
-		}
-		val = val.Elem()
-	}
-
-	switch val.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return val.Int(), nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return int64(val.Uint()), nil
-	case reflect.Float32, reflect.Float64:
-		return int64(val.Float()), nil
-	case reflect.String:
-		return strconv.ParseInt(val.String(), 10, 64)
-	default:
-		return 0, fmt.Errorf("cannot convert %v to int", val.Kind())
-	}
+	return cast.ToInt64E(p.rval.Interface())
 }
 
 // Float returns float64 value
 func (p *Value) Float() (float64, error) {
-	val := p.rval
-	for val.Kind() == reflect.Ptr {
-		if val.IsNil() {
-			return 0, errors.New("nil pointer")
-		}
-		val = val.Elem()
-	}
-
-	switch val.Kind() {
-	case reflect.Float32, reflect.Float64:
-		return val.Float(), nil
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return float64(val.Int()), nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return float64(val.Uint()), nil
-	case reflect.String:
-		return strconv.ParseFloat(val.String(), 64)
-	default:
-		return 0, fmt.Errorf("cannot convert %v to float", val.Kind())
-	}
+	return cast.ToFloat64E(p.rval.Interface())
 }
 
 // Bool returns bool value
 func (p *Value) Bool() (bool, error) {
-	val := p.rval
-	for val.Kind() == reflect.Ptr {
-		if val.IsNil() {
-			return false, errors.New("nil pointer")
-		}
-		val = val.Elem()
-	}
-
-	switch val.Kind() {
-	case reflect.Bool:
-		return val.Bool(), nil
-	case reflect.String:
-		return strconv.ParseBool(val.String())
-	default:
-		return false, fmt.Errorf("cannot convert %v to bool", val.Kind())
-	}
+	return cast.ToBoolE(p.rval.Interface())
 }
 
 func (p *Value) Any() any {
 	val := p.rval
-	for val.Kind() == reflect.Ptr {
+	for val.Kind() == reflect.Pointer {
 		if val.IsNil() {
 			return nil
 		}

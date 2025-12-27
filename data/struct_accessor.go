@@ -3,7 +3,6 @@ package data
 import (
 	"fmt"
 	"reflect"
-	"unsafe"
 )
 
 type structAccessor struct {
@@ -43,14 +42,13 @@ func (s *structAccessor) Raw() any {
 		return s.value.Interface()
 	}
 
-	ptr := unsafe.Pointer(s.value.UnsafeAddr())
-	return reflect.NewAt(s.value.Type(), ptr).Elem().Interface()
+	return nil
 }
 
 // TODO: resolve conflict with embedded fields in same name
 func (s *structAccessor) GetValue(path string) (*Value, error) {
 	if path == "" {
-		return nil, fmt.Errorf("empty path")
+		return &Value{rval: s.value}, nil
 	}
 
 	fieldName, nextPath := cutPath(path)

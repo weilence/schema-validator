@@ -51,7 +51,7 @@ func TestValue_Int(t *testing.T) {
 		{"float", reflect.ValueOf(float32(3.0)), 3, false},
 		{"string", reflect.ValueOf("123"), 123, false},
 		{"badstring", reflect.ValueOf("x"), 0, true},
-		{"nilptr", reflect.ValueOf((*int)(nil)), 0, true},
+		{"nilptr", reflect.ValueOf((*int)(nil)), 0, false},
 	}
 
 	for _, tt := range tests {
@@ -80,7 +80,7 @@ func TestValue_Float(t *testing.T) {
 		{"uint", reflect.ValueOf(uint(3)), 3.0, false},
 		{"string", reflect.ValueOf("4.56"), 4.56, false},
 		{"badstring", reflect.ValueOf("nope"), 0, true},
-		{"nilptr", reflect.ValueOf((*float64)(nil)), 0, true},
+		{"nilptr", reflect.ValueOf((*float64)(nil)), 0, false},
 	}
 
 	for _, tt := range tests {
@@ -108,7 +108,7 @@ func TestValue_Bool(t *testing.T) {
 		{"stringTrue", reflect.ValueOf("true"), true, false},
 		{"stringFalse", reflect.ValueOf("false"), false, false},
 		{"badstring", reflect.ValueOf("yes"), false, true},
-		{"nilptr", reflect.ValueOf((*bool)(nil)), false, true},
+		{"nilptr", reflect.ValueOf((*bool)(nil)), false, false},
 	}
 
 	for _, tt := range tests {

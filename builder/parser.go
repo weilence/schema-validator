@@ -1,15 +1,17 @@
-package tags
+package builder
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
 
 	"github.com/weilence/schema-validator/schema"
+	"github.com/weilence/schema-validator/validators"
 )
 
 type ParseConfig struct {
-	registry *schema.Registry
+	registry *validators.Registry
 
 	ruleSplitter       rune
 	nameParamSeparator rune
@@ -19,7 +21,7 @@ type ParseConfig struct {
 
 func defaultParseConfig() *ParseConfig {
 	return &ParseConfig{
-		registry:           schema.DefaultRegistry(),
+		registry:           validators.DefaultRegistry(),
 		ruleSplitter:       '|',
 		nameParamSeparator: '=',
 		paramsSeparator:    ',',
@@ -29,7 +31,7 @@ func defaultParseConfig() *ParseConfig {
 
 type ParseOption func(*ParseConfig)
 
-func WithRegistry(registry *schema.Registry) ParseOption {
+func WithRegistry(registry *validators.Registry) ParseOption {
 	return func(cfg *ParseConfig) {
 		cfg.registry = registry
 	}
@@ -153,7 +155,11 @@ func parseField(fieldType reflect.Type, tags []TagRule, cfg *ParseConfig) (schem
 		arraySchema := schema.NewArraySchema(elemSchema)
 
 		for _, rule := range arrayTags {
-			arraySchema.AddValidator(rule.Name, rule.Params...)
+			params := convertValidatorParams(rule.Name, rule.Params, cfg)
+			v := cfg.registry.BuildValidator(rule.Name, params)
+			if v != nil {
+				arraySchema.AddValidator(v)
+			}
 		}
 
 		return arraySchema, nil
@@ -174,10 +180,166 @@ func parseField(fieldType reflect.Type, tags []TagRule, cfg *ParseConfig) (schem
 	// Primitive field
 	fieldSchema := schema.NewFieldSchema()
 	for _, tag := range tags {
-		fieldSchema.AddValidator(tag.Name, tag.Params...)
+		params := convertValidatorParams(tag.Name, tag.Params, cfg)
+		v := cfg.registry.BuildValidator(tag.Name, params)
+		if v != nil {
+			fieldSchema.AddValidator(v)
+		}
 	}
 
 	return fieldSchema, nil
+}
+
+func convertValidatorParams(name string, paramStrs []string, cfg *ParseConfig) []any {
+	paramTypes := cfg.registry.GetValidatorParamTypes(name)
+
+	paramTypesLen := len(paramTypes)
+	if paramTypesLen == 0 && len(paramStrs) != 0 {
+		panic(fmt.Sprintf("%s does not take any parameters", name))
+	}
+
+	if paramTypesLen == 1 {
+		paramType := paramTypes[0]
+		kind := paramType.Kind()
+		switch kind {
+		case reflect.Array:
+			res := reflect.ArrayOf(paramType.Len(), paramType.Elem())
+			rv := reflect.New(res).Elem()
+			for i, paramStr := range paramStrs {
+				elem := parseValidatorParam(paramType.Elem(), paramStr)
+				rv.Index(i).Set(reflect.ValueOf(elem))
+			}
+
+			return []any{rv.Interface()}
+		case reflect.Slice:
+			res := reflect.MakeSlice(paramType, 0, 0)
+			for _, paramStr := range paramStrs {
+				elem := parseValidatorParam(paramType.Elem(), paramStr)
+				res = reflect.Append(res, reflect.ValueOf(elem))
+			}
+
+			return []any{res.Interface()}
+		default:
+			if len(paramStrs) != 1 {
+				panic(fmt.Sprintf("%s expected 1 parameter, got %d", name, len(paramStrs)))
+			}
+
+			return []any{parseValidatorParam(paramType, paramStrs[0])}
+		}
+	}
+
+	if len(paramStrs) != paramTypesLen {
+		panic(fmt.Sprintf("%s expected %d parameters, got %d", name, paramTypesLen, len(paramStrs)))
+	}
+
+	params := make([]any, paramTypesLen)
+	for i, paramType := range paramTypes {
+		params[i] = parseValidatorParam(paramType, paramStrs[i])
+	}
+
+	return params
+}
+
+func parseValidatorParam(paramType reflect.Type, paramValue string) any {
+	switch paramType.Kind() {
+	case reflect.Bool:
+		var boolVal bool
+		_, err := fmt.Sscanf(paramValue, "%t", &boolVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid bool parameter: %s", paramValue))
+		}
+		return boolVal
+	case reflect.Int:
+		var intVal int
+		_, err := fmt.Sscanf(paramValue, "%d", &intVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid int parameter: %s", paramValue))
+		}
+		return intVal
+	case reflect.Int8:
+		var intVal int8
+		_, err := fmt.Sscanf(paramValue, "%d", &intVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid int8 parameter: %s", paramValue))
+		}
+		return intVal
+	case reflect.Int16:
+		var intVal int16
+		_, err := fmt.Sscanf(paramValue, "%d", &intVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid int16 parameter: %s", paramValue))
+		}
+		return intVal
+	case reflect.Int32:
+		var intVal int32
+		_, err := fmt.Sscanf(paramValue, "%d", &intVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid int32 parameter: %s", paramValue))
+		}
+		return intVal
+	case reflect.Int64:
+		var intVal int64
+		_, err := fmt.Sscanf(paramValue, "%d", &intVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid int64 parameter: %s", paramValue))
+		}
+		return intVal
+	case reflect.Uint:
+		var uintVal uint
+		_, err := fmt.Sscanf(paramValue, "%d", &uintVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid uint parameter: %s", paramValue))
+		}
+		return uintVal
+	case reflect.Uint8:
+		var uintVal uint8
+		_, err := fmt.Sscanf(paramValue, "%d", &uintVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid uint8 parameter: %s", paramValue))
+		}
+		return uintVal
+	case reflect.Uint16:
+		var uintVal uint16
+		_, err := fmt.Sscanf(paramValue, "%d", &uintVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid uint16 parameter: %s", paramValue))
+		}
+		return uintVal
+	case reflect.Uint32:
+		var uintVal uint32
+		_, err := fmt.Sscanf(paramValue, "%d", &uintVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid uint32 parameter: %s", paramValue))
+		}
+		return uintVal
+	case reflect.Uint64:
+		var uintVal uint64
+		_, err := fmt.Sscanf(paramValue, "%d", &uintVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid uint64 parameter: %s", paramValue))
+		}
+		return uintVal
+	case reflect.Float32:
+		var floatVal float32
+		_, err := fmt.Sscanf(paramValue, "%f", &floatVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid float parameter: %s", paramValue))
+		}
+		return floatVal
+	case reflect.Float64:
+		var floatVal float64
+		_, err := fmt.Sscanf(paramValue, "%f", &floatVal)
+		if err != nil {
+			panic(fmt.Sprintf("invalid float parameter: %s", paramValue))
+		}
+		return floatVal
+	case reflect.String:
+		return paramValue
+	case reflect.Interface:
+		return paramValue
+	default:
+		panic(fmt.Sprintf("unsupported parameter type: %s", paramType.Kind()))
+	}
 }
 
 // TagRule represents a parsed validation rule

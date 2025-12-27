@@ -11,24 +11,13 @@ type SchemaModifier interface {
 	ModifySchema(ctx *Context)
 }
 
-// SchemaType represents the type of schema
-type SchemaType int
-
-const (
-	SchemaTypeField SchemaType = iota
-	SchemaTypeArray
-	SchemaTypeObject
-)
-
 // Schema represents a validation schema for any data type
 type Schema interface {
 	// Validate validates data against this schema
 	// ctx contains both the validation context and the data accessor
 	Validate(ctx *Context) error
 
-	// Type returns the schema type (field/array/object)
-	Type() SchemaType
+	AddValidator(v Validator) Schema
 
-	// ToString returns a JSON representation of the schema
-	ToString() string
+	RemoveValidator(name string) Schema
 }

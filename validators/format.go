@@ -1,25 +1,27 @@
-package schema
+package validators
 
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/weilence/schema-validator/schema"
 )
 
-func init() {
+func registerFormat(r *Registry)  {
 	var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
-	Register("email", func(ctx *Context, params []string) error {
+	r.Register("email", func(ctx *schema.Context) error {
 		field, err := ctx.Value()
 		if err != nil {
 			return nil
 		}
 		str := field.String()
 		if !emailRegex.MatchString(str) {
-			return NewValidationError(ctx.Path(), "email", nil)
+			return schema.NewValidationError(ctx.Path(), "email", nil)
 		}
 		return nil
 	})
 
-	Register("pattern", func(ctx *Context, params []string) error {
+	r.Register("pattern", func(ctx *schema.Context, params []string) error {
 		if len(params) == 0 {
 			return nil
 		}
@@ -34,7 +36,7 @@ func init() {
 		}
 		str := field.String()
 		if !regex.MatchString(str) {
-			return NewValidationError(ctx.Path(), "pattern", map[string]any{"pattern": regex.String()})
+			return schema.NewValidationError(ctx.Path(), "pattern", map[string]any{"pattern": regex.String()})
 		}
 		return nil
 	})

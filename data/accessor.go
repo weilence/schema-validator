@@ -26,6 +26,10 @@ func New(data any) Accessor {
 }
 
 func NewAccessor(rv reflect.Value) Accessor {
+	if rv.Kind() == reflect.Interface {
+		rv = rv.Elem()
+	}
+
 	switch rv.Kind() {
 	case reflect.Slice, reflect.Array:
 		return NewArrayAccessor(rv)

@@ -3,9 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/weilence/schema-validator/data"
-
 	validator "github.com/weilence/schema-validator"
+	"github.com/weilence/schema-validator/builder"
 	"github.com/weilence/schema-validator/schema"
 )
 
@@ -23,23 +22,13 @@ func (f DynamicForm) ModifySchema(ctx *schema.Context) {
 		return
 	}
 
-	// 从 ctx 获取 accessor（使用缓存）
-	obj, _ := ctx.Accessor().(data.ObjectAccessor)
-
-	// 读取required字段的值
-	requiredField, _ := obj.GetField("required")
-	fieldVal, _ := requiredField.GetValue("")
-	isRequired, _ := fieldVal.Bool()
-
 	// 根据required标志动态修改value字段的验证
-	if isRequired {
-		s.AddField("value", schema.Field().
+	if f.Required {
+		s.AddField("value", builder.Field().
 			AddValidator("required").
 			Build())
 	} else {
-		s.AddField("value", schema.Field().
-			Optional().
-			Build())
+		s.RemoveField("value")
 	}
 }
 
@@ -55,37 +44,23 @@ type Address struct {
 }
 
 func (u User) ModifySchema(ctx *schema.Context) {
-	s, ok := ctx.Schema().(*schema.ObjectSchema)
-	if !ok || s == nil {
-		return
-	}
-
-	obj, _ := ctx.Accessor().(data.ObjectAccessor)
-
-	// 访问嵌套的address.country
-	addressField, _ := obj.GetField("address")
-	addressObj, _ := addressField.(data.ObjectAccessor)
-	countryField, _ := addressObj.GetField("country")
-	countryVal, _ := countryField.GetValue("")
-	country := countryVal.String()
+	s := ctx.Schema().(*schema.ObjectSchema)
 
 	// 根据国家添加不同的邮编验证
-	switch country {
+	switch u.Address.Country {
 	case "US":
-		addressSchema := schema.Object().
-			Field("country", schema.Field().Build()).
-			Field("zipCode", schema.Field().
-				AddValidator("min_length", "5").
-				AddValidator("max_length", "5").
+		addressSchema := builder.Object().
+			Field("zipCode", builder.Field().
+				AddValidator("min", 5).
+				AddValidator("max", 5).
 				Build()).
 			Build()
 		s.AddField("address", addressSchema)
 	case "CN":
-		addressSchema := schema.Object().
-			Field("country", schema.Field().Build()).
-			Field("zipCode", schema.Field().
-				AddValidator("min_length", "6").
-				AddValidator("max_length", "6").
+		addressSchema := builder.Object().
+			Field("zipCode", builder.Field().
+				AddValidator("min", 6).
+				AddValidator("max", 6).
 				Build()).
 			Build()
 		s.AddField("address", addressSchema)
@@ -106,9 +81,8 @@ func main() {
 	err := v1.Validate(form1)
 	fmt.Printf("Form with required=true, empty value: %v\n", err)
 	if err != nil {
-		for _, err := range err.(*schema.ValidationResult).Errors() {
-			fmt.Printf("  - %s: %s\n", err.FieldPath, err.ErrorCode)
-		}
+		newErr := err.(*schema.ValidationError)
+		fmt.Printf("  - %s: %s\n", newErr.Path, newErr.Name)
 	}
 
 	// required=false时，value可选
@@ -149,9 +123,7 @@ func main() {
 	err = v2.Validate(user2)
 	fmt.Printf("US user with invalid zipcode (123456): %v\n", err)
 	if err != nil {
-		for _, err := range err.(*schema.ValidationResult).Errors() {
-			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
-		}
+		fmt.Println(err)
 	}
 
 	// China zipcode (6 digits)
@@ -176,9 +148,7 @@ func main() {
 	err = v2.Validate(user4)
 	fmt.Printf("CN user with invalid zipcode (10000): %v\n", err)
 	if err != nil {
-		for _, err := range err.(*schema.ValidationResult).Errors() {
-			fmt.Printf("  - %s: %s (params: %v)\n", err.FieldPath, err.ErrorCode, err.Params)
-		}
+		fmt.Println(err)
 	}
 
 	fmt.Println("\n=== Dynamic Schema Examples Completed ===")

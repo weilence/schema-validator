@@ -1,22 +1,24 @@
-package validator_test
+package validator
 
 import (
 	"testing"
 
-	validator "github.com/weilence/schema-validator"
+	"github.com/weilence/schema-validator/builder"
 	"github.com/weilence/schema-validator/schema"
+	"github.com/weilence/schema-validator/validators"
 )
 
 // Test 1: Tag-based validation
 func TestTagBasedValidation(t *testing.T) {
 	type User struct {
+		Gender   string `json:"gender" validate:"oneof=male,female,other"`
 		Email    string `json:"email" validate:"required|email"`
-		Password string `json:"password" validate:"required|min_length=8"`
+		Password string `json:"password" validate:"required|min=8"`
 		Confirm  string `json:"confirm" validate:"required|eqfield=Password"`
-		Age      int    `json:"age" validate:"min=18,max=120"`
+		Age      int    `json:"age" validate:"min=18|max=120"`
 	}
 
-	v, err := validator.New(User{})
+	v, err := New(User{})
 	if err != nil {
 		t.Fatalf("Failed to create validator: %v", err)
 	}
@@ -27,6 +29,7 @@ func TestTagBasedValidation(t *testing.T) {
 		Password: "password123",
 		Confirm:  "password123",
 		Age:      25,
+		Gender:   "male",
 	}
 
 	err = v.Validate(validUser)
@@ -40,6 +43,7 @@ func TestTagBasedValidation(t *testing.T) {
 		Password: "password123",
 		Confirm:  "different",
 		Age:      25,
+		Gender:   "male",
 	}
 
 	err = v.Validate(invalidUser)
@@ -52,8 +56,8 @@ func TestTagBasedValidation(t *testing.T) {
 				t.Error("Expected error on confirm field")
 			}
 		case *schema.ValidationError:
-			if e.FieldPath != "confirm" {
-				t.Errorf("Expected error on confirm field, got %s", e.FieldPath)
+			if e.Path != "confirm" {
+				t.Errorf("Expected error on confirm field, got %s", e.Path)
 			}
 		default:
 			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
@@ -78,8 +82,8 @@ func TestTagBasedValidation(t *testing.T) {
 				t.Error("Expected error on email field")
 			}
 		case *schema.ValidationError:
-			if e.FieldPath != "email" {
-				t.Errorf("Expected error on email field, got %s", e.FieldPath)
+			if e.Path != "email" {
+				t.Errorf("Expected error on email field, got %s", e.Path)
 			}
 		default:
 			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
@@ -89,13 +93,13 @@ func TestTagBasedValidation(t *testing.T) {
 
 // Test 2: Code-based validation
 func TestCodeBasedValidation(t *testing.T) {
-	userSchema := schema.Object().
-		Field("email", schema.Field().AddValidator("required").AddValidator("email").Build()).
-		Field("password", schema.Field().AddValidator("required").AddValidator("min_length", "8").Build()).
-		Field("age", schema.Field().AddValidator("min", "18").AddValidator("max", "120").Build()).
+	userSchema := builder.Object().
+		Field("email", builder.Field().AddValidator("required").AddValidator("email").Build()).
+		Field("password", builder.Field().AddValidator("required").AddValidator("min", 8).Build()).
+		Field("age", builder.Field().AddValidator("min", 18).AddValidator("max", 120).Build()).
 		Build()
 
-	v := validator.NewFromSchema(userSchema)
+	v := NewFromSchema(userSchema)
 
 	// Valid data (map)
 	validData := map[string]any{
@@ -126,8 +130,8 @@ func TestCodeBasedValidation(t *testing.T) {
 				t.Error("Expected error on email field")
 			}
 		case *schema.ValidationError:
-			if e.FieldPath != "email" {
-				t.Errorf("Expected error on email field, got %s", e.FieldPath)
+			if e.Path != "email" {
+				t.Errorf("Expected error on email field, got %s", e.Path)
 			}
 		default:
 			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
@@ -147,7 +151,7 @@ func TestEmbeddedStructWithPrivateFields(t *testing.T) {
 		Address
 	}
 
-	v, err := validator.New(Person{})
+	v, err := New(Person{})
 	if err != nil {
 		t.Fatalf("Failed to create validator: %v", err)
 	}
@@ -184,8 +188,8 @@ func TestEmbeddedStructWithPrivateFields(t *testing.T) {
 				t.Error("Expected error on street field")
 			}
 		case *schema.ValidationError:
-			if e.FieldPath != "street" {
-				t.Errorf("Expected error on street field, got %s", e.FieldPath)
+			if e.Path != "street" {
+				t.Errorf("Expected error on street field, got %s", e.Path)
 			}
 		default:
 			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
@@ -196,10 +200,10 @@ func TestEmbeddedStructWithPrivateFields(t *testing.T) {
 // Test 4: Array validation
 func TestArrayValidation(t *testing.T) {
 	type TodoList struct {
-		Items []string `json:"items" validate:"min_items=1,max_items=10"`
+		Items []string `json:"items" validate:"min=1|max=10"`
 	}
 
-	v, err := validator.New(TodoList{})
+	v, err := New(TodoList{})
 	if err != nil {
 		t.Fatalf("Failed to create validator: %v", err)
 	}
@@ -229,8 +233,8 @@ func TestArrayValidation(t *testing.T) {
 				t.Error("Expected error on items field")
 			}
 		case *schema.ValidationError:
-			if e.FieldPath != "items" {
-				t.Errorf("Expected error on items field, got %s", e.FieldPath)
+			if e.Path != "items" {
+				t.Errorf("Expected error on items field, got %s", e.Path)
 			}
 		default:
 			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
@@ -241,17 +245,17 @@ func TestArrayValidation(t *testing.T) {
 // Test 5: Cross-field validation with code
 func TestCrossFieldValidationWithCode(t *testing.T) {
 	// register passwordMatchValidator into registry and add by name
-	schema.Register("password", func(ctx *schema.Context, params []string) error {
+	validators.Register("password", func(ctx *schema.Context, params []any) error {
 		return nil
 	})
 
-	userSchema := schema.Object().
-		Field("password", schema.Field().AddValidator("required").AddValidator("min_length", "8").Build()).
-		Field("confirmPassword", schema.Field().AddValidator("required").AddValidator("eqfield", "password").Build()).
+	userSchema := builder.Object().
+		Field("password", builder.Field().AddValidator("required").AddValidator("min", 8).Build()).
+		Field("confirmPassword", builder.Field().AddValidator("required").AddValidator("eqfield", "password").Build()).
 		AddValidator("password").
 		Build()
 
-	v := validator.NewFromSchema(userSchema)
+	v := NewFromSchema(userSchema)
 
 	// Valid data
 	validData := map[string]any{
@@ -278,12 +282,12 @@ func TestCrossFieldValidationWithCode(t *testing.T) {
 
 // Test 6: Map validation
 func TestMapValidation(t *testing.T) {
-	userSchema := schema.Object().
-		Field("name", schema.Field().AddValidator("required").Build()).
-		Field("age", schema.Field().AddValidator("min", "0").Build()).
+	userSchema := builder.Object().
+		Field("name", builder.Field().AddValidator("required").Build()).
+		Field("age", builder.Field().AddValidator("min", 0).Build()).
 		Build()
 
-	v := validator.NewFromSchema(userSchema)
+	v := NewFromSchema(userSchema)
 
 	// Valid map
 	validMap := map[string]any{
@@ -324,16 +328,13 @@ func (f DynamicForm) ModifySchema(ctx *schema.Context) {
 		// Dynamically modify "value" field validation based on required flag
 		if isRequired {
 			// Add required validation
-			valueSchema := schema.Field().
+			valueSchema := builder.Field().
 				AddValidator("required").
 				Build()
 			ctx.Schema().(*schema.ObjectSchema).AddField("value", valueSchema)
 		} else {
 			// Make value optional (override any existing schema)
-			valueSchema := schema.Field().
-				Optional().
-				Build()
-			ctx.Schema().(*schema.ObjectSchema).AddField("value", valueSchema)
+			ctx.Schema().(*schema.ObjectSchema).RemoveField("value")
 		}
 	}
 
@@ -345,7 +346,7 @@ func (f DynamicForm) ModifySchema(ctx *schema.Context) {
 
 // Test SchemaModifier interface
 func TestSchemaModifier(t *testing.T) {
-	v, err := validator.New(DynamicForm{})
+	v, err := New(DynamicForm{})
 	if err != nil {
 		t.Fatalf("Failed to create validator: %v", err)
 	}
@@ -367,8 +368,8 @@ func TestSchemaModifier(t *testing.T) {
 				t.Error("Expected error on value field when required=true")
 			}
 		case *schema.ValidationError:
-			if e.FieldPath != "value" {
-				t.Errorf("Expected error on value field, got %s", e.FieldPath)
+			if e.Path != "value" {
+				t.Errorf("Expected error on value field, got %s", e.Path)
 			}
 		default:
 			t.Fatalf("expected ValidationResult or ValidationError, got %T", err)
@@ -415,9 +416,9 @@ func (u NestedUser) ModifySchema(ctx *schema.Context) {
 	// Add different validation rules based on country
 	if country == "US111" {
 		// US zip codes should be 5 digits
-		zipCodeSchema := schema.Field().
-			AddValidator("min_length", "5").
-			AddValidator("max_length", "5").
+		zipCodeSchema := builder.Field().
+			AddValidator("min", 5).
+			AddValidator("max", 5).
 			Build()
 		ctx.Schema().(*schema.ObjectSchema).AddField("zipCode", zipCodeSchema)
 	}
@@ -437,9 +438,9 @@ func (u NestedAddress) ModifySchema(ctx *schema.Context) {
 	// Add different validation rules based on country
 	if country == "US" {
 		// US zip codes should be 5 digits
-		zipCodeSchema := schema.Field().
-			AddValidator("min_length", "5").
-			AddValidator("max_length", "5").
+		zipCodeSchema := builder.Field().
+			AddValidator("min", 5).
+			AddValidator("max", 5).
 			Build()
 		ctx.Schema().(*schema.ObjectSchema).AddField("country", zipCodeSchema)
 	}
@@ -447,7 +448,7 @@ func (u NestedAddress) ModifySchema(ctx *schema.Context) {
 
 // Test accessing nested values in SchemaModifier
 func TestSchemaModifierNestedAccess(t *testing.T) {
-	v, err := validator.New(NestedUser{})
+	v, err := New(NestedUser{})
 	if err != nil {
 		t.Fatalf("Failed to create validator: %v", err)
 	}

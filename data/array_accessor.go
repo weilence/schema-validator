@@ -20,7 +20,7 @@ func (s *ArrayAccessor) Raw() any {
 
 func (s *ArrayAccessor) GetValue(path string) (*Value, error) {
 	if path == "" {
-		return nil, errors.New("empty path")
+		return &Value{rval: s.value}, nil
 	}
 
 	part, nextPath := cutPath(path)

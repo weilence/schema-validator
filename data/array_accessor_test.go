@@ -16,7 +16,7 @@ func TestArrayAccessor_GetValue_TableDriven(t *testing.T) {
 	}{
 		{"string index", []string{"zero", "one", "two"}, "[2]", "two", false},
 		{"int index", []int{7, 8, 9}, "[0]", "7", false},
-		{"pointer to struct elem", []*struct{ V int }{{V: 1}, {V: 2}}, "[1]", "", true},
+		{"pointer to struct elem", []*struct{ V int }{{V: 1}, {V: 2}}, "[1]", "<struct { V int } Value>", false},
 	}
 
 	for _, tt := range tests {
@@ -41,7 +41,6 @@ func TestArrayAccessor_Errors_TableDriven(t *testing.T) {
 		path    string
 		wantErr string
 	}{
-		{"empty path", "", "empty path"},
 		{"plain invalid", "x", "invalid array index: x"},
 		{"scan invalid", "[x]", "invalid array index in scan: [x]"},
 		{"oob", "[5]", "index 5 out of bounds"},
@@ -91,5 +90,3 @@ func TestArrayAccessor_GetIndex_Len_Iterate(t *testing.T) {
 	_, err = aa.GetIndex(5)
 	assert.Error(t, err)
 }
-
-func newInt(v int) *int { return &v }

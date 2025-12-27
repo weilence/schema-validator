@@ -19,7 +19,7 @@ func (m *mapAccessor) Raw() any {
 
 func (m *mapAccessor) GetValue(path string) (*Value, error) {
 	if path == "" {
-		return nil, fmt.Errorf("empty path")
+		return &Value{rval: m.value}, nil
 	}
 
 	fieldName, nextPath := cutPath(path)

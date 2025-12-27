@@ -7,34 +7,36 @@ import (
 
 // ValidationError represents a single validation failure with field path and error code
 type ValidationError struct {
-	// FieldPath is the path to the field (e.g., "user.email", "items[0].name")
-	FieldPath string
+	// Path is the path to the field (e.g., "user.email", "items[0].name")
+	Path string
 
-	// ErrorCode is the validation error code (e.g., "required", "min", "eqfield")
-	ErrorCode string
+	// Name is the validation error code (e.g., "required", "min", "eqfield")
+	Name string
 
 	// Params contains additional error parameters (e.g., min value, field name)
-	Params map[string]any
+	Params []any
+
+	Err error
 }
 
-// NewValidationError creates a new validation error
-func NewValidationError(path, code string, params map[string]any) *ValidationError {
-	if params == nil {
-		params = make(map[string]any)
+func NewValidationError(path, name string, params map[string]any) *ValidationError {
+	paramList := make([]any, 0, len(params))
+	for k, v := range params {
+		paramList = append(paramList, fmt.Sprintf("%s=%v", k, v))
 	}
 	return &ValidationError{
-		FieldPath: path,
-		ErrorCode: code,
-		Params:    params,
+		Path:   path,
+		Name:   name,
+		Params: paramList,
 	}
 }
 
 // Error implements the error interface
 func (e *ValidationError) Error() string {
 	if len(e.Params) > 0 {
-		return fmt.Sprintf("%s: %s %v", e.FieldPath, e.ErrorCode, e.Params)
+		return fmt.Sprintf("%s: %s %v", e.Path, e.Name, e.Params)
 	}
-	return fmt.Sprintf("%s: %s", e.FieldPath, e.ErrorCode)
+	return fmt.Sprintf("%s: %s", e.Path, e.Name)
 }
 
 // ValidationResult holds all validation errors
@@ -89,7 +91,7 @@ func (r *ValidationResult) FirstError() *ValidationError {
 func (r *ValidationResult) ErrorsByField() map[string][]*ValidationError {
 	result := make(map[string][]*ValidationError)
 	for _, err := range r.errors {
-		result[err.FieldPath] = append(result[err.FieldPath], err)
+		result[err.Path] = append(result[err.Path], err)
 	}
 	return result
 }
@@ -97,7 +99,7 @@ func (r *ValidationResult) ErrorsByField() map[string][]*ValidationError {
 // HasFieldError checks if a specific field has an error
 func (r *ValidationResult) HasFieldError(fieldPath string) bool {
 	for _, err := range r.errors {
-		if err.FieldPath == fieldPath {
+		if err.Path == fieldPath {
 			return true
 		}
 	}

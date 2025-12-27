@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/weilence/schema-validator/data"
@@ -10,8 +9,6 @@ import (
 // ArraySchema validates arrays/slices
 type ArraySchema struct {
 	elementSchema Schema
-	minItems      *int
-	maxItems      *int
 	validators    []Validator
 }
 
@@ -21,11 +18,6 @@ func NewArraySchema(elementSchema Schema) *ArraySchema {
 		elementSchema: elementSchema,
 		validators:    make([]Validator, 0),
 	}
-}
-
-// Type returns SchemaTypeArray
-func (a *ArraySchema) Type() SchemaType {
-	return SchemaTypeArray
 }
 
 // Validate validates an array
@@ -48,74 +40,18 @@ func (a *ArraySchema) Validate(ctx *Context) error {
 	})
 }
 
-// AddValidatorByName adds an array validator by name from the global registry
-func (a *ArraySchema) AddValidator(name string, params ...string) *ArraySchema {
-	v := DefaultRegistry().BuildValidator(name, params)
-	if v != nil {
-		a.validators = append(a.validators, v)
-	}
+func (a *ArraySchema) AddValidator(v Validator) Schema {
+	a.validators = append(a.validators, v)
 	return a
 }
 
-// SetMinItems sets minimum items constraint
-func (a *ArraySchema) SetMinItems(min int) *ArraySchema {
-	a.minItems = &min
-	return a
-}
-
-// SetMaxItems sets maximum items constraint
-func (a *ArraySchema) SetMaxItems(max int) *ArraySchema {
-	a.maxItems = &max
-	return a
-}
-
-// GetMinItems returns minimum items constraint
-func (a *ArraySchema) GetMinItems() *int {
-	return a.minItems
-}
-
-// GetMaxItems returns maximum items constraint
-func (a *ArraySchema) GetMaxItems() *int {
-	return a.maxItems
-}
-
-// ToString returns a JSON representation of the array schema
-func (a *ArraySchema) ToString() string {
-	result := map[string]any{
-		"type": "array",
-	}
-
-	// Add element schema as nested JSON
-	if a.elementSchema != nil {
-		// Parse the nested schema's JSON string back to a map for proper nesting
-		var elementMap map[string]any
-		elementJSON := a.elementSchema.ToString()
-		if err := json.Unmarshal([]byte(elementJSON), &elementMap); err == nil {
-			result["element"] = elementMap
-		} else {
-			result["element"] = elementJSON
+func (a *ArraySchema) RemoveValidator(name string) Schema {
+	newValidators := make([]Validator, 0)
+	for _, v := range a.validators {
+		if v.Name() != name {
+			newValidators = append(newValidators, v)
 		}
 	}
-
-	if a.minItems != nil {
-		result["minItems"] = *a.minItems
-	}
-
-	if a.maxItems != nil {
-		result["maxItems"] = *a.maxItems
-	}
-
-	if len(a.validators) > 0 {
-		validators := make([]map[string]any, 0, len(a.validators))
-		for _, v := range a.validators {
-			validators = append(validators, validatorToMap(v))
-		}
-		result["validators"] = validators
-	}
-
-	bytes, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return fmt.Sprintf(`{"type":"array","error":"%s"}`, err.Error())
-	}
-	return string(bytes)
+	a.validators = newValidators
+	return a
 }

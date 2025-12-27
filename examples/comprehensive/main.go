@@ -4,28 +4,19 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/spf13/cast"
 	"github.com/weilence/schema-validator/data"
+	"github.com/weilence/schema-validator/validators"
 
 	validator "github.com/weilence/schema-validator"
+	"github.com/weilence/schema-validator/builder"
 	"github.com/weilence/schema-validator/schema"
-	"github.com/weilence/schema-validator/tags"
 )
-
-// parseInt 辅助函数
-func parseInt(s string) int {
-	var result int
-	for _, ch := range s {
-		if ch >= '0' && ch <= '9' {
-			result = result*10 + int(ch-'0')
-		}
-	}
-	return result
-}
 
 // OrderForm 订单表单，综合使用多个高级功能
 type OrderForm struct {
-	OrderType   string `json:"orderType" validate:"enum=standard:express:same_day"`
-	Price       int    `json:"price" validate:"between=1:10000"`
+	OrderType   string `json:"orderType" validate:"enum=standard,express,same_day"`
+	Price       int    `json:"price" validate:"between=1,10000"`
 	MinQuantity int    `json:"minQuantity"`
 	MaxQuantity int    `json:"maxQuantity"`
 	Quantity    int    `json:"quantity"`
@@ -41,8 +32,8 @@ func (f OrderForm) ModifySchema(ctx *schema.Context) {
 	obj, _ := ctx.Accessor().(data.ObjectAccessor)
 
 	// 1. 根据min/max动态设置quantity范围
-	minField, _ := obj.GetField("minQuantity")
-	maxField, _ := obj.GetField("maxQuantity")
+	minField, _ := obj.GetField("MinQuantity")
+	maxField, _ := obj.GetField("MaxQuantity")
 
 	if minField != nil && maxField != nil {
 		minVal, _ := minField.GetValue("")
@@ -50,23 +41,23 @@ func (f OrderForm) ModifySchema(ctx *schema.Context) {
 		min, _ := minVal.Int()
 		max, _ := maxVal.Int()
 
-		quantitySchema := schema.Field().
-			AddValidator("min", fmt.Sprint(int(min))).
-			AddValidator("max", fmt.Sprint(int(max))).
+		quantitySchema := builder.Field().
+			AddValidator("min", min).
+			AddValidator("max", max).
 			Build()
 		s.AddField("quantity", quantitySchema)
 	}
 
 	// 2. 根据订单类型调整价格要求
-	typeField, _ := obj.GetField("orderType")
+	typeField, _ := obj.GetField("OrderType")
 	if typeField != nil {
 		typeVal, _ := typeField.GetValue("")
 		orderType := typeVal.String()
 
 		if orderType == "same_day" {
 			// 当日达最低100元
-			priceSchema := schema.Field().
-				AddValidator("min", "100").
+			priceSchema := builder.Field().
+				AddValidator("min", 100).
 				Build()
 			s.AddField("price", priceSchema)
 		}
@@ -77,7 +68,7 @@ func main() {
 	fmt.Println("=== Comprehensive Example: Dynamic Order Form ===")
 
 	// 创建自定义registry注册enum和between validator
-	registry := schema.NewRegistry()
+	registry := validators.NewRegistry()
 
 	// 注册enum validator
 	registry.Register("enum", func(ctx *schema.Context, params []string) error {
@@ -95,8 +86,8 @@ func main() {
 	})
 
 	// 注册between validator
-	registry.Register("between", func(ctx *schema.Context, params []string) error {
-		min, max := parseInt(params[0]), parseInt(params[1])
+	registry.Register("between", func(ctx *schema.Context, before, after any) error {
+		min, max := cast.To[int](before), cast.To[int](after)
 		valAcc, _ := ctx.Value()
 		val, _ := valAcc.Int()
 		if val < int64(min) || val > int64(max) {
@@ -109,7 +100,7 @@ func main() {
 
 	// 创建validator
 	typ := reflect.TypeOf(OrderForm{})
-	objSchema, _ := tags.Parse(typ, tags.WithRegistry(registry))
+	objSchema, _ := builder.Parse(typ, builder.WithRegistry(registry))
 	v := validator.NewFromSchema(objSchema)
 
 	// 测试1: 有效标准订单
@@ -127,7 +118,7 @@ func main() {
 	if err != nil {
 		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+				fmt.Printf("  - %s: %s %v\n", e.Path, e.Name, e.Params)
 			}
 		} else {
 			fmt.Printf("  - %v\n", err)
@@ -150,7 +141,7 @@ func main() {
 	if err != nil {
 		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+				fmt.Printf("  - %s: %s %v\n", e.Path, e.Name, e.Params)
 			}
 		} else {
 			fmt.Printf("  - %v\n", err)
@@ -173,7 +164,7 @@ func main() {
 	if err != nil {
 		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+				fmt.Printf("  - %s: %s %v\n", e.Path, e.Name, e.Params)
 			}
 		} else {
 			fmt.Printf("  - %v\n", err)
@@ -210,7 +201,7 @@ func main() {
 	if err != nil {
 		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+				fmt.Printf("  - %s: %s %v\n", e.Path, e.Name, e.Params)
 			}
 		} else {
 			fmt.Printf("  - %v\n", err)
@@ -233,7 +224,7 @@ func main() {
 	if err != nil {
 		if res, ok := err.(*schema.ValidationResult); ok {
 			for _, e := range res.Errors() {
-				fmt.Printf("  - %s: %s %v\n", e.FieldPath, e.ErrorCode, e.Params)
+				fmt.Printf("  - %s: %s %v\n", e.Path, e.Name, e.Params)
 			}
 		} else {
 			fmt.Printf("  - %v\n", err)
