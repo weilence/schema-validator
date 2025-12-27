@@ -38,8 +38,8 @@ func (f OrderForm) ModifySchema(ctx *schema.Context) {
 	if minField != nil && maxField != nil {
 		minVal, _ := minField.GetValue("")
 		maxVal, _ := maxField.GetValue("")
-		min, _ := minVal.Int()
-		max, _ := maxVal.Int()
+		min := minVal.Int()
+		max := maxVal.Int()
 
 		quantitySchema := builder.Field().
 			AddValidator("min", min).
@@ -89,7 +89,7 @@ func main() {
 	registry.Register("between", func(ctx *schema.Context, before, after any) error {
 		min, max := cast.To[int](before), cast.To[int](after)
 		valAcc := ctx.Value()
-		val, _ := valAcc.Int()
+		val := valAcc.Int()
 		if val < int64(min) || val > int64(max) {
 			return schema.NewValidationError(ctx.Path(), "between", map[string]any{
 				"min": min, "max": max,

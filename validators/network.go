@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	"github.com/miekg/dns"
+	"github.com/weilence/schema-validator/data"
 	"github.com/weilence/schema-validator/schema"
 )
 
@@ -16,25 +17,29 @@ func registerNetwork(r *Registry) {
 			return nil
 		}
 
-		return schema.NewValidationError(ctx.Path(), "ip", map[string]any{
-			"actual": val,
-		})
+		return schema.ErrCheckFailed
 	})
 
 	r.Register("port", func(ctx *schema.Context) error {
 		field := ctx.Value()
-		val, err := field.Int()
+
+		ok, err := compareValue(GreaterThanOrEqual, field, data.NewValue(1))
 		if err != nil {
-			return nil
+			return err
+		}
+		if !ok {
+			return schema.ErrCheckFailed
 		}
 
-		if val >= 1 && val <= 65535 {
-			return nil
+		ok, err = compareValue(LessThanOrEqual, field, data.NewValue(65535))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return schema.ErrCheckFailed
 		}
 
-		return schema.NewValidationError(ctx.Path(), "port", map[string]any{
-			"actual": val,
-		})
+		return nil
 	})
 
 	r.Register("domain", func(ctx *schema.Context) error {
@@ -45,18 +50,16 @@ func registerNetwork(r *Registry) {
 			return nil
 		}
 
-		return schema.NewValidationError(ctx.Path(), "domain", map[string]any{
-			"actual": val,
-		})
+		return schema.ErrCheckFailed
 	})
 
 	var urlRegex = regexp.MustCompile(`^https?://[^\s]+$`)
 	r.Register("url", func(ctx *schema.Context) error {
-		field := ctx.Value()
-		str := field.String()
+		str := ctx.Value().String()
 		if !urlRegex.MatchString(str) {
-			return schema.NewValidationError(ctx.Path(), "url", nil)
+			return schema.ErrCheckFailed
 		}
+
 		return nil
 	})
 }

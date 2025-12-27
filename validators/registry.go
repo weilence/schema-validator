@@ -82,7 +82,7 @@ func (r *Registry) Register(name string, fn any) {
 		newFn = func(ctx *schema.Context, params []any) error {
 			defer func() {
 				if r := recover(); r != nil {
-					panic(fmt.Sprintf("validator factory panic: name=%s, params=%v, err=%v", name, params, r))
+					panic(fmt.Errorf("validator factory panic: name=%s, params=%v, err=%v", name, params, r))
 				}
 			}()
 

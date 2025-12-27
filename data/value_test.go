@@ -57,11 +57,12 @@ func TestValue_Int(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &Value{rval: tt.val}
-			got, err := v.Int()
 			if tt.wantErr {
-				assert.Error(t, err)
+				assert.Panics(t, func() {
+					_ = v.Int()
+				})
 			} else {
-				assert.NoError(t, err)
+				got := v.Int()
 				assert.Equal(t, tt.want, got)
 			}
 		})
@@ -86,11 +87,12 @@ func TestValue_Float(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &Value{rval: tt.val}
-			got, err := v.Float()
 			if tt.wantErr {
-				assert.Error(t, err)
+				assert.Panics(t, func() {
+					_ = v.Float()
+				})
 			} else {
-				assert.NoError(t, err)
+				got := v.Float()
 				assert.Equal(t, tt.want, got)
 			}
 		})
@@ -114,11 +116,12 @@ func TestValue_Bool(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &Value{rval: tt.val}
-			got, err := v.Bool()
 			if tt.wantErr {
-				assert.Error(t, err)
+				assert.Panics(t, func() {
+					_ = v.Bool()
+				})
 			} else {
-				assert.NoError(t, err)
+				got := v.Bool()
 				assert.Equal(t, tt.want, got)
 			}
 		})
@@ -131,4 +134,37 @@ func TestValue_Any(t *testing.T) {
 
 	v := &Value{rval: reflect.ValueOf(7)}
 	assert.Equal(t, 7, v.Any())
+}
+
+func TestValue_IsNilOrZero(t *testing.T) {
+	tests := []struct {
+		name string
+		val  any
+		want bool
+	}{
+		{"nil", nil, true},
+		{"zero int", 0, true},
+		{"non-zero int", 5, false},
+		{"zero string", "", true},
+		{"non-zero string", "hello", false},
+		{"nil slice", []int(nil), true},
+		{"empty slice", []int{}, false},
+		{"non-empty slice", []int{1, 2}, false},
+		{"nil map", map[string]int(nil), true},
+		{"empty map", map[string]int{}, false},
+		{"non-empty map", map[string]int{"a": 1}, false},
+		{"nil pointer", (*int)(nil), true},
+		{"non-nil pointer", func() *int { i := 3; return &i }(), false},
+		{"zero struct", struct{ A int }{}, true},
+		{"non-zero struct", struct{ A int }{A: 1}, false},
+		{"nil interface", any(nil), true},
+		{"non-nil interface", any(42), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := NewValue(tt.val)
+			assert.Equal(t, tt.want, v.IsNilOrZero())
+		})
+	}
 }

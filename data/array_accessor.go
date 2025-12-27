@@ -24,13 +24,9 @@ func (s *ArrayAccessor) GetValue(path string) (*Value, error) {
 	}
 
 	part, nextPath := cutPath(path)
-	if len(part) < 2 || part[0] != '[' || part[len(part)-1] != ']' {
-		return nil, errors.New("invalid array index: " + part)
-	}
-
 	// Parse index from path
 	var idx int
-	n, err := fmt.Sscanf(part[1:len(part)-1], "%d", &idx)
+	n, err := fmt.Sscanf(part, "[%d]", &idx)
 	if err != nil || n != 1 {
 		return nil, errors.New("invalid array index in scan: " + part)
 	}

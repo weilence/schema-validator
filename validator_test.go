@@ -323,7 +323,7 @@ func (f DynamicForm) ModifySchema(ctx *schema.Context) {
 	// Access current object's fields
 	requiredField, _ := ctx.GetValue("Required")
 	if requiredField != nil {
-		isRequired, _ := requiredField.Bool()
+		isRequired := requiredField.Bool()
 
 		// Dynamically modify "value" field validation based on required flag
 		if isRequired {

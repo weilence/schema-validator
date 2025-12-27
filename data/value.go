@@ -29,18 +29,10 @@ func (p *Value) GetValue(path string) (*Value, error) {
 }
 
 func (p *Value) Kind() reflect.Kind {
-	if p.rval.Kind() == reflect.Interface {
-		return p.rval.Elem().Kind()
-	}
-
 	return p.rval.Kind()
 }
 
 func (p *Value) Len() int {
-	if p.rval.Kind() == reflect.Interface {
-		return p.rval.Elem().Len()
-	}
-
 	return p.rval.Len()
 }
 
@@ -63,27 +55,45 @@ func (p *Value) IsSliceOrArray() bool {
 
 // String returns string representation
 func (p *Value) String() string {
-	v, err := cast.ToStringE(p.rval.Interface())
-	if err != nil {
-		return p.rval.String()
-	}
-
-	return v
+	return cast.Must[string](cast.ToStringE(p.rval.Interface()))
 }
 
 // Int returns int64 value
-func (p *Value) Int() (int64, error) {
-	return cast.ToInt64E(p.rval.Interface())
+func (p *Value) Int() int64 {
+	return cast.Must[int64](cast.ToInt64E(p.rval.Interface()))
 }
 
 // Float returns float64 value
-func (p *Value) Float() (float64, error) {
-	return cast.ToFloat64E(p.rval.Interface())
+func (p *Value) Float() float64 {
+	return cast.Must[float64](cast.ToFloat64E(p.rval.Interface()))
 }
 
 // Bool returns bool value
-func (p *Value) Bool() (bool, error) {
-	return cast.ToBoolE(p.rval.Interface())
+func (p *Value) Bool() bool {
+	return cast.Must[bool](cast.ToBoolE(p.rval.Interface()))
+}
+
+func (p *Value) Uint() uint64 {
+	return cast.Must[uint64](cast.ToUint64E(p.rval.Interface()))
+}
+
+func (p *Value) IsNilOrZero() bool {
+	v := p.rval
+
+	if !v.IsValid() {
+		return true
+	}
+
+	switch v.Kind() {
+	case reflect.Chan,
+		reflect.Func,
+		reflect.Map,
+		reflect.Pointer,
+		reflect.Slice:
+		return v.IsNil()
+	}
+
+	return v.IsZero()
 }
 
 func (p *Value) Any() any {

@@ -18,7 +18,7 @@ func compareFieldValidator(ct compareType) func(*schema.Context, string) error {
 		}
 
 		if !ok {
-			return schema.NewValidationError(ctx.Path(), ct.String()+"field", map[string]any{"field": fieldName})
+			return schema.ErrCheckFailed
 		}
 
 		return nil

@@ -40,7 +40,7 @@ func main() {
 		max := parseInt(params[1])
 
 		fieldVal := ctx.Value()
-		val, _ := fieldVal.Int()
+		val := fieldVal.Int()
 		if val < int64(min) || val > int64(max) {
 			return schema.NewValidationError(ctx.Path(), "between", map[string]any{
 				"min": min, "max": max, "actual": val,
@@ -134,7 +134,7 @@ func main() {
 		step := parseInt(params[2])
 
 		fieldVal := ctx.Value()
-		val, _ := fieldVal.Int()
+		val := fieldVal.Int()
 
 		if val < int64(min) || val > int64(max) {
 			return schema.NewValidationError(ctx.Path(), "out_of_range", map[string]any{

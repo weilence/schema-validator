@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+var ErrCheckFailed = fmt.Errorf("validation check failed")
+
 // ValidationError represents a single validation failure with field path and error code
 type ValidationError struct {
 	// Path is the path to the field (e.g., "user.email", "items[0].name")
