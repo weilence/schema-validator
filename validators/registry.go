@@ -123,9 +123,9 @@ func (r *Registry) Register(name string, fn any) {
 	}
 }
 
-// BuildValidator gets a field validator by name
+// NewValidator gets a field validator by name
 // params is a slice of parameter strings
-func (r *Registry) BuildValidator(name string, params []any) schema.Validator {
+func (r *Registry) NewValidator(name string, params ...any) schema.Validator {
 	factory, ok := r.validators[name]
 	if !ok {
 		panic(fmt.Sprintf("validator '%s' not found in registry", name))
@@ -152,4 +152,8 @@ var defaultRegistry = NewRegistry()
 
 func Register(name string, fn any) {
 	defaultRegistry.Register(name, fn)
+}
+
+func NewValidator(name string, params ...any) schema.Validator {
+	return defaultRegistry.NewValidator(name, params...)
 }

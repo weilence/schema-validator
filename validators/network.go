@@ -8,13 +8,9 @@ import (
 	"github.com/weilence/schema-validator/schema"
 )
 
-func registerNetwork(r *Registry)  {
+func registerNetwork(r *Registry) {
 	r.Register("ip", func(ctx *schema.Context) error {
-		field, err := ctx.Value()
-		if err != nil {
-			return nil
-		}
-
+		field := ctx.Value()
 		val := field.String()
 		if net.ParseIP(val) != nil {
 			return nil
@@ -26,11 +22,7 @@ func registerNetwork(r *Registry)  {
 	})
 
 	r.Register("port", func(ctx *schema.Context) error {
-		field, err := ctx.Value()
-		if err != nil {
-			return nil
-		}
-
+		field := ctx.Value()
 		val, err := field.Int()
 		if err != nil {
 			return nil
@@ -46,11 +38,7 @@ func registerNetwork(r *Registry)  {
 	})
 
 	r.Register("domain", func(ctx *schema.Context) error {
-		field, err := ctx.Value()
-		if err != nil {
-			return nil
-		}
-
+		field := ctx.Value()
 		val := field.String()
 		_, ok := dns.IsDomainName(val)
 		if ok {
@@ -64,10 +52,7 @@ func registerNetwork(r *Registry)  {
 
 	var urlRegex = regexp.MustCompile(`^https?://[^\s]+$`)
 	r.Register("url", func(ctx *schema.Context) error {
-		field, err := ctx.Value()
-		if err != nil {
-			return nil
-		}
+		field := ctx.Value()
 		str := field.String()
 		if !urlRegex.MatchString(str) {
 			return schema.NewValidationError(ctx.Path(), "url", nil)

@@ -1,113 +1,30 @@
 package validators
 
 import (
-	"cmp"
 	"fmt"
-	"reflect"
 	"slices"
 	"strings"
 
-	"github.com/spf13/cast"
+	"github.com/weilence/schema-validator/data"
 	"github.com/weilence/schema-validator/schema"
 )
-
-type compareType int
-
-const (
-	LessThan           compareType = iota // <
-	LessThanOrEqual                       // <=
-	GreaterThan                           // >
-	GreaterThanOrEqual                    // >=
-	Equal                                 // ==
-	NotEqual                              // !=
-)
-
-func compareFn[T cmp.Ordered](t compareType, a, b T) bool {
-	switch t {
-	case LessThan:
-		return a < b
-	case LessThanOrEqual:
-		return a <= b
-	case GreaterThan:
-		return a > b
-	case GreaterThanOrEqual:
-		return a >= b
-	case Equal:
-		return a == b
-	case NotEqual:
-		return a != b
-	default:
-		panic("unknown compare type")
-	}
-}
-
 func compareValidator(ct compareType) func(*schema.Context, any) error {
 	return func(ctx *schema.Context, value any) error {
-		field, err := ctx.Value()
+		field := ctx.Value()
+		otherValue := data.NewValue(value)
+		ok, err := compareValue(ct, field, otherValue)
 		if err != nil {
-			return fmt.Errorf("failed to get field value: %v", err)
+			return err
 		}
 
-		kind := field.Kind()
-		if kind == reflect.String || kind == reflect.Slice || kind == reflect.Array || kind == reflect.Map {
-			min, err := cast.ToIntE(value)
-			if err != nil {
-				return fmt.Errorf("invalid min parameter: %v", err)
-			}
-
-			if !compareFn(ct, field.Len(), min) {
-				return schema.NewValidationError(ctx.Path(), "min", map[string]any{"min": min, "actual": field.Len()})
-			}
-
-			return nil
-		} else if field.IsInt() {
-			min, err := cast.ToInt64E(value)
-			if err != nil {
-				return fmt.Errorf("invalid min parameter: %v", err)
-			}
-
-			intValue, err := cast.ToInt64E(field.Raw())
-			if err != nil {
-				return nil
-			}
-
-			if !compareFn(ct, intValue, int64(min)) {
-				return schema.NewValidationError(ctx.Path(), "min", map[string]any{"min": min, "actual": intValue})
-			}
-			return nil
-		} else if field.IsUint() {
-			min, err := cast.ToUint64E(value)
-			if err != nil {
-				return fmt.Errorf("invalid min parameter: %v", err)
-			}
-
-			uintValue, err := cast.ToUint64E(field.Raw())
-			if err != nil {
-				return nil
-			}
-
-			if !compareFn(ct, uintValue, uint64(min)) {
-				return schema.NewValidationError(ctx.Path(), "min", map[string]any{"min": min, "actual": uintValue})
-			}
-			return nil
-		} else if field.IsFloat() {
-			min, err := cast.ToFloat64E(value)
-			if err != nil {
-				return fmt.Errorf("invalid min parameter: %v", err)
-			}
-
-			floatValue, err := cast.ToFloat64E(field.Raw())
-			if err != nil {
-				return nil
-			}
-
-			if !compareFn(ct, floatValue, float64(min)) {
-				return schema.NewValidationError(ctx.Path(), "min", map[string]any{"min": min, "actual": floatValue})
-			}
-			return nil
-		} else {
-			return fmt.Errorf("min validator not supported for kind %s", kind.String())
+		if !ok {
+			return schema.NewValidationError(ctx.Path(), ct.String(), map[string]any{
+				"expected": value,
+				"actual":   field.Raw(),
+			})
 		}
+
+		return nil
 	}
 }
 
@@ -117,11 +34,7 @@ func registerOther(r *Registry) {
 	r.Register("max", compareValidator(LessThanOrEqual))
 
 	r.Register("oneof", func(ctx *schema.Context, params []string) error {
-		field, err := ctx.GetValue("")
-		if err != nil {
-			return nil
-		}
-
+		field := ctx.Value()
 		val := field.String()
 		if val == "" {
 			return nil
@@ -138,10 +51,7 @@ func registerOther(r *Registry) {
 	})
 
 	r.Register("required", func(ctx *schema.Context) error {
-		field, err := ctx.Value()
-		if err != nil {
-			return nil
-		}
+		field := ctx.Value()
 		str := field.String()
 		if strings.TrimSpace(str) == "" {
 			return schema.NewValidationError(ctx.Path(), "required", nil)
@@ -162,11 +72,7 @@ func registerOther(r *Registry) {
 			return fmt.Errorf("failed to get field '%s': %v", otherFieldName, err)
 		}
 
-		currentField, err := ctx.Value()
-		if err != nil {
-			return fmt.Errorf("failed to get current field value: %v", err)
-		}
-
+		currentField := ctx.Value()
 		if otherValue.String() == expectedValue {
 			// Check if current field is non-empty
 			if currentField.String() == "" {

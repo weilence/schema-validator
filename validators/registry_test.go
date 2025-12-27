@@ -3,50 +3,55 @@ package validators
 import (
 	"testing"
 
+	"github.com/weilence/schema-validator/data"
 	"github.com/weilence/schema-validator/schema"
 )
 
 // Test multi-parameter validator factory
 func TestMultiParameterValidator(t *testing.T) {
 	// Register a custom validator that takes multiple parameters
-	registry := NewRegistry()
-
 	// Example: between=10,20 validator
-	registry.Register("between", func(ctx *schema.Context, params []string) error {
-		if len(params) < 2 {
-			return nil
-		}
+	Register("between", func(ctx *schema.Context, min any, max any) error {
+		field := ctx.Value()
 
-		min := parseIntHelper(params[0])
-		max := parseIntHelper(params[1])
+		minValue := data.NewValue(min)
+		maxValue := data.NewValue(max)
 
-		field, err := ctx.Value()
+		ok1, err := compareValue(GreaterThanOrEqual, field, minValue)
 		if err != nil {
-			return nil
+			return err
 		}
 
-		val, err := field.Int()
+		ok2, err := compareValue(LessThanOrEqual, field, maxValue)
 		if err != nil {
-			return nil
+			return err
 		}
 
-		if val < int64(min) || val > int64(max) {
+		if !ok1 || !ok2 {
 			return schema.NewValidationError(ctx.Path(), "between", map[string]any{
 				"min":    min,
 				"max":    max,
-				"actual": val,
+				"actual": field.Raw(),
 			})
 		}
 		return nil
 	})
+
+	// Create a context with a field value
+
+	s := schema.NewFieldSchema().AddValidator(NewValidator("between", 10, 20))
+	ctx := schema.NewContext(s, data.NewValue(15))
+	// Validate the context
+	err := s.Validate(ctx)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 }
 
 // Test multi-parameter with three params
 func TestThreeParameterValidator(t *testing.T) {
-	registry := NewRegistry()
-
-	// Example: enum=option1:option2:option3 validator
-	registry.Register("enum", func(ctx *schema.Context, params []string) error {
+	// Example: enum=option1,option2,option3 validator
+	Register("enum", func(ctx *schema.Context, params []string) error {
 		if len(params) == 0 {
 			return nil
 		}
@@ -56,11 +61,7 @@ func TestThreeParameterValidator(t *testing.T) {
 			allowedValues[p] = true
 		}
 
-		field, err := ctx.Value()
-		if err != nil {
-			return nil
-		}
-
+		field := ctx.Value()
 		val := field.String()
 		if !allowedValues[val] {
 			return schema.NewValidationError(ctx.Path(), "enum", map[string]any{
@@ -70,16 +71,4 @@ func TestThreeParameterValidator(t *testing.T) {
 		}
 		return nil
 	})
-
-}
-
-// Helper function
-func parseIntHelper(s string) int {
-	var result int
-	for i := 0; i < len(s); i++ {
-		if s[i] >= '0' && s[i] <= '9' {
-			result = result*10 + int(s[i]-'0')
-		}
-	}
-	return result
 }

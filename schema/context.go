@@ -63,8 +63,13 @@ func (c *Context) Path() string {
 	return c.path
 }
 
-func (c *Context) Value() (*data.Value, error) {
-	return c.accessor.GetValue("")
+func (c *Context) Value() *data.Value {
+	v, err := c.accessor.GetValue("")
+	if err != nil {
+		panic(err)
+	}
+
+	return v
 }
 
 func (c *Context) GetValue(path string) (*data.Value, error) {

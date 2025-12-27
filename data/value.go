@@ -11,6 +11,11 @@ type Value struct {
 	rval reflect.Value
 }
 
+func NewValue(v any) *Value {
+	rv := reflect.ValueOf(v)
+	return &Value{rval: rv}
+}
+
 func (p *Value) Raw() any {
 	return p.rval.Interface()
 }
@@ -40,18 +45,20 @@ func (p *Value) Len() int {
 }
 
 func (p *Value) IsInt() bool {
-	kind := p.Kind()
-	return kind == reflect.Int || kind == reflect.Int8 || kind == reflect.Int16 || kind == reflect.Int32 || kind == reflect.Int64
+	return p.rval.CanInt()
 }
 
 func (p *Value) IsUint() bool {
-	kind := p.Kind()
-	return kind == reflect.Uint || kind == reflect.Uint8 || kind == reflect.Uint16 || kind == reflect.Uint32 || kind == reflect.Uint64
+	return p.rval.CanUint()
 }
 
 func (p *Value) IsFloat() bool {
+	return p.rval.CanFloat()
+}
+
+func (p *Value) IsSliceOrArray() bool {
 	kind := p.Kind()
-	return kind == reflect.Float32 || kind == reflect.Float64
+	return kind == reflect.Slice || kind == reflect.Array
 }
 
 // String returns string representation

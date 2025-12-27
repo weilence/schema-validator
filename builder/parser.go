@@ -156,7 +156,7 @@ func parseField(fieldType reflect.Type, tags []TagRule, cfg *ParseConfig) (schem
 
 		for _, rule := range arrayTags {
 			params := convertValidatorParams(rule.Name, rule.Params, cfg)
-			v := cfg.registry.BuildValidator(rule.Name, params)
+			v := cfg.registry.NewValidator(rule.Name, params...)
 			if v != nil {
 				arraySchema.AddValidator(v)
 			}
@@ -181,7 +181,7 @@ func parseField(fieldType reflect.Type, tags []TagRule, cfg *ParseConfig) (schem
 	fieldSchema := schema.NewFieldSchema()
 	for _, tag := range tags {
 		params := convertValidatorParams(tag.Name, tag.Params, cfg)
-		v := cfg.registry.BuildValidator(tag.Name, params)
+		v := cfg.registry.NewValidator(tag.Name, params...)
 		if v != nil {
 			fieldSchema.AddValidator(v)
 		}

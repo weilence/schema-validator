@@ -39,7 +39,7 @@ func main() {
 		min := parseInt(params[0])
 		max := parseInt(params[1])
 
-		fieldVal, _ := ctx.Value()
+		fieldVal := ctx.Value()
 		val, _ := fieldVal.Int()
 		if val < int64(min) || val > int64(max) {
 			return schema.NewValidationError(ctx.Path(), "between", map[string]any{
@@ -87,7 +87,7 @@ func main() {
 			allowedValues[p] = true
 		}
 
-		fieldVal, _ := ctx.Value()
+		fieldVal := ctx.Value()
 		val := fieldVal.String()
 		if !allowedValues[val] {
 			return schema.NewValidationError(ctx.Path(), "enum", map[string]any{
@@ -133,7 +133,7 @@ func main() {
 		max := parseInt(params[1])
 		step := parseInt(params[2])
 
-		fieldVal, _ := ctx.Value()
+		fieldVal := ctx.Value()
 		val, _ := fieldVal.Int()
 
 		if val < int64(min) || val > int64(max) {
