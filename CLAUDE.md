@@ -280,11 +280,7 @@ passwordValidator := validation.ObjectValidatorFunc(
         confirmField, _ := confirm.AsField()
 
         if pwdField.String() != confirmField.String() {
-            return schema.NewValidationError(
-                ctx.Path() + ".confirm",
-                "password_mismatch",
-                nil,
-            )
+            return schema.ErrCheckFailed
         }
         return nil
     },
@@ -407,9 +403,7 @@ registry.Register("between", func(ctx *schema.Context, params []string) error {
     val, _ := fieldVal.Int()
     
     if val < int64(min) || val > int64(max) {
-        return schema.NewValidationError(ctx.Path(), "between", map[string]any{
-            "min": min, "max": max,
-        })
+        return schema.ErrCheckFailed
     }
     return nil
 })
@@ -484,9 +478,7 @@ registry.Register("between", func(ctx *schema.Context, params []string) error {
     val, _ := fieldVal.Int()
     
     if val < int64(min) || val > int64(max) {
-        return schema.NewValidationError(ctx.Path(), "between", map[string]any{
-            "min": min, "max": max,
-        })
+        return schema.ErrCheckFailed
     }
     return nil
 })
@@ -705,9 +697,7 @@ go run examples/comprehensive/main.go
 
 ```go
 // ✅ 好的设计
-err := schema.NewValidationError("user.email", "invalid_email", map[string]any{
-    "pattern": emailRegex,
-})
+err := schema.ErrCheckFailed
 
 // ❌ 避免
 err := ValidationError{

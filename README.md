@@ -302,9 +302,7 @@ registry.Register("between", func(ctx *schema.Context, params []string) error {
     val, _ := fieldVal.Int()
     
     if val < int64(min) || val > int64(max) {
-        return schema.NewValidationError(ctx.Path(), "between", map[string]any{
-            "min": min, "max": max,
-        })
+        return schema.ErrCheckFailed
     }
     return nil
 })

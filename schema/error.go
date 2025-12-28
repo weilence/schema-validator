@@ -9,7 +9,6 @@ var ErrCheckFailed = fmt.Errorf("validation check failed")
 
 // ValidationError represents a single validation failure with field path and error code
 type ValidationError struct {
-	// Path is the path to the field (e.g., "user.email", "items[0].name")
 	Path string
 
 	// Name is the validation error code (e.g., "required", "min", "eqfield")
@@ -21,15 +20,12 @@ type ValidationError struct {
 	Err error
 }
 
-func NewValidationError(path, name string, params map[string]any) *ValidationError {
-	paramList := make([]any, 0, len(params))
-	for k, v := range params {
-		paramList = append(paramList, fmt.Sprintf("%s=%v", k, v))
-	}
+func NewValidationError(path, name string, params []any, err error) *ValidationError {
 	return &ValidationError{
 		Path:   path,
 		Name:   name,
-		Params: paramList,
+		Params: params,
+		Err:    err,
 	}
 }
 

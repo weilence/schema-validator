@@ -10,6 +10,7 @@ import (
 type Context struct {
 	schema   Schema
 	accessor data.Accessor
+	skipRest bool
 
 	// 上下文信息
 	parent *Context
@@ -78,4 +79,8 @@ func (c *Context) GetValue(path string) (*data.Value, error) {
 
 func (c *Context) Parent() *Context {
 	return c.parent
+}
+
+func (c *Context) SkipRest() bool {
+	return c.skipRest
 }

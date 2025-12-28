@@ -9,7 +9,9 @@ import (
 // ArraySchema validates arrays/slices
 type ArraySchema struct {
 	elementSchema Schema
-	validators    []Validator
+
+	validators     []Validator
+	itemValidators []Validator
 }
 
 // NewArraySchema creates a new array schema
@@ -23,6 +25,10 @@ func NewArraySchema(elementSchema Schema) *ArraySchema {
 // Validate validates an array
 func (a *ArraySchema) Validate(ctx *Context) error {
 	for _, validator := range a.validators {
+		if ctx.skipRest {
+			break
+		}
+
 		if err := validator.Validate(ctx); err != nil {
 			return err
 		}

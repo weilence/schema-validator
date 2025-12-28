@@ -11,7 +11,6 @@ type ObjectSchema struct {
 	fields       map[string]Schema
 	fieldNameMap map[string]string // mapping of lower-case field names to actual names
 	validators   []Validator
-	strict       bool // disallow unknown fields
 }
 
 // NewObjectSchema creates a new object schema
@@ -20,7 +19,6 @@ func NewObjectSchema() *ObjectSchema {
 		fields:       make(map[string]Schema),
 		fieldNameMap: make(map[string]string),
 		validators:   make([]Validator, 0),
-		strict:       false,
 	}
 }
 
@@ -30,6 +28,16 @@ func (o *ObjectSchema) Validate(ctx *Context) error {
 	for _, accessor := range oa.Accessors() {
 		if v, ok := accessor.Raw().(SchemaModifier); ok {
 			v.ModifySchema(ctx)
+		}
+	}
+
+	for _, validator := range o.validators {
+		if ctx.skipRest {
+			break
+		}
+
+		if err := validator.Validate(ctx); err != nil {
+			return err
 		}
 	}
 
@@ -48,13 +56,6 @@ func (o *ObjectSchema) Validate(ctx *Context) error {
 		fieldCtx := ctx.WithChild(name, fieldSchema, fieldData)
 
 		if err := fieldSchema.Validate(fieldCtx); err != nil {
-			return err
-		}
-	}
-
-	// Run object-level validators (cross-field)
-	for _, validator := range o.validators {
-		if err := validator.Validate(ctx); err != nil {
 			return err
 		}
 	}

@@ -16,6 +16,10 @@ func NewFieldSchema() *FieldSchema {
 func (f *FieldSchema) Validate(ctx *Context) error {
 	// Run all validators
 	for _, validator := range f.validators {
+		if ctx.skipRest {
+			break
+		}
+
 		if err := validator.Validate(ctx); err != nil {
 			return err
 		}

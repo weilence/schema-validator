@@ -43,13 +43,15 @@ func registerOther(r *Registry) {
 		return schema.ErrCheckFailed
 	})
 
-	r.Register("required", func(ctx *schema.Context) error {
+	requiredFn := func(ctx *schema.Context) error {
 		if ctx.Value().IsNilOrZero() {
 			return schema.ErrCheckFailed
 		}
 
 		return nil
-	})
+	}
+
+	r.Register("required", requiredFn)
 
 	r.Register("required_if", func(ctx *schema.Context, fieldName string, expectedValue any) error {
 		otherValue, err := ctx.Parent().GetValue(fieldName)
@@ -62,8 +64,16 @@ func registerOther(r *Registry) {
 			return err
 		}
 
-		if ok && ctx.Value().IsNilOrZero() {
-			return schema.ErrCheckFailed
+		if ok {
+			return requiredFn(ctx)
+		}
+
+		return nil
+	})
+
+	r.Register("omitempty", func(ctx *schema.Context) error {
+		if ctx.Value().IsNilOrZero() {
+			ctx.SkipRest()
 		}
 
 		return nil

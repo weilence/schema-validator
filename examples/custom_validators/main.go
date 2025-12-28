@@ -42,9 +42,7 @@ func main() {
 		fieldVal := ctx.Value()
 		val := fieldVal.Int()
 		if val < int64(min) || val > int64(max) {
-			return schema.NewValidationError(ctx.Path(), "between", map[string]any{
-				"min": min, "max": max, "actual": val,
-			})
+			return schema.ErrCheckFailed
 		}
 		return nil
 	})
@@ -90,10 +88,7 @@ func main() {
 		fieldVal := ctx.Value()
 		val := fieldVal.String()
 		if !allowedValues[val] {
-			return schema.NewValidationError(ctx.Path(), "enum", map[string]any{
-				"allowed": params,
-				"actual":  val,
-			})
+			return schema.ErrCheckFailed
 		}
 		return nil
 	})
@@ -137,15 +132,11 @@ func main() {
 		val := fieldVal.Int()
 
 		if val < int64(min) || val > int64(max) {
-			return schema.NewValidationError(ctx.Path(), "out_of_range", map[string]any{
-				"min": min, "max": max, "actual": val,
-			})
+			return schema.ErrCheckFailed
 		}
 
 		if (int(val)-min)%step != 0 {
-			return schema.NewValidationError(ctx.Path(), "invalid_step", map[string]any{
-				"step": step, "actual": val,
-			})
+			return schema.ErrCheckFailed
 		}
 
 		return nil

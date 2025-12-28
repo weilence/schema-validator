@@ -78,9 +78,7 @@ func main() {
 		}
 		val := ctx.Value()
 		if !allowedValues[val.String()] {
-			return schema.NewValidationError(ctx.Path(), "enum", map[string]any{
-				"allowed": params,
-			})
+			return schema.ErrCheckFailed
 		}
 		return nil
 	})
@@ -91,9 +89,7 @@ func main() {
 		valAcc := ctx.Value()
 		val := valAcc.Int()
 		if val < int64(min) || val > int64(max) {
-			return schema.NewValidationError(ctx.Path(), "between", map[string]any{
-				"min": min, "max": max,
-			})
+			return schema.ErrCheckFailed
 		}
 		return nil
 	})

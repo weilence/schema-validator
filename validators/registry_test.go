@@ -28,17 +28,12 @@ func TestMultiParameterValidator(t *testing.T) {
 		}
 
 		if !ok1 || !ok2 {
-			return schema.NewValidationError(ctx.Path(), "between", map[string]any{
-				"min":    min,
-				"max":    max,
-				"actual": field.Raw(),
-			})
+			return schema.ErrCheckFailed
 		}
 		return nil
 	})
 
 	// Create a context with a field value
-
 	s := schema.NewFieldSchema().AddValidator(NewValidator("between", 10, 20))
 	ctx := schema.NewContext(s, data.NewValue(15))
 	// Validate the context
@@ -64,10 +59,7 @@ func TestThreeParameterValidator(t *testing.T) {
 		field := ctx.Value()
 		val := field.String()
 		if !allowedValues[val] {
-			return schema.NewValidationError(ctx.Path(), "enum", map[string]any{
-				"allowed": params,
-				"actual":  val,
-			})
+			return schema.ErrCheckFailed
 		}
 		return nil
 	})
