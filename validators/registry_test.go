@@ -34,7 +34,7 @@ func TestMultiParameterValidator(t *testing.T) {
 	})
 
 	// Create a context with a field value
-	s := schema.NewFieldSchema().AddValidator(NewValidator("between", 10, 20))
+	s := schema.NewField().AddValidator(NewValidator("between", 10, 20))
 	ctx := schema.NewContext(s, data.NewValue(15))
 	// Validate the context
 	err := s.Validate(ctx)

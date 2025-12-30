@@ -1,0 +1,54 @@
+# 中文验证消息
+# Path: 被验证的字段路径
+# Arg1, Arg2, ...: 验证器的位置参数
+
+required:
+  other: "{{.Path}} 为必填项"
+
+min:
+  other: "{{.Path}} 最小值为 {{.Arg1}}"
+
+max:
+  other: "{{.Path}} 最大值为 {{.Arg1}}"
+
+email:
+  other: "{{.Path}} 必须是有效的邮箱地址"
+
+pattern:
+  other: "{{.Path}} 格式不正确"
+
+oneof:
+  other: "{{.Path}} 必须是以下值之一: {{.Arg1}}"
+
+eqfield:
+  other: "{{.Path}} 必须等于 {{.Arg1}}"
+
+nefield:
+  other: "{{.Path}} 不能等于 {{.Arg1}}"
+
+gtfield:
+  other: "{{.Path}} 必须大于 {{.Arg1}}"
+
+ltfield:
+  other: "{{.Path}} 必须小于 {{.Arg1}}"
+
+gtefield:
+  other: "{{.Path}} 必须大于或等于 {{.Arg1}}"
+
+ltefield:
+  other: "{{.Path}} 必须小于或等于 {{.Arg1}}"
+
+required_if:
+  other: "当 {{.Arg1}} 为 {{.Arg2}} 时，{{.Path}} 为必填项"
+
+ip:
+  other: "{{.Path}} 必须是有效的 IP 地址"
+
+port:
+  other: "{{.Path}} 必须是有效的端口号 (1-65535)"
+
+domain:
+  other: "{{.Path}} 必须是有效的域名"
+
+url:
+  other: "{{.Path}} 必须是有效的 URL"

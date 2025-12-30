@@ -16,6 +16,14 @@ func NewValue(v any) *Value {
 	return &Value{rval: rv}
 }
 
+func (p *Value) GetField(name string) (Accessor, error) {
+	if name != "" {
+		return nil, errors.New("cannot get field from primitive value")
+	}
+
+	return p, nil
+}
+
 func (p *Value) Raw() any {
 	return p.rval.Interface()
 }

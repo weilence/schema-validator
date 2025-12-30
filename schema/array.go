@@ -8,17 +8,16 @@ import (
 
 // ArraySchema validates arrays/slices
 type ArraySchema struct {
-	elementSchema Schema
+	element Schema
 
-	validators     []Validator
-	itemValidators []Validator
+	validators []Validator
 }
 
-// NewArraySchema creates a new array schema
-func NewArraySchema(elementSchema Schema) *ArraySchema {
+// NewArray creates a new array schema
+func NewArray(element Schema) *ArraySchema {
 	return &ArraySchema{
-		elementSchema: elementSchema,
-		validators:    make([]Validator, 0),
+		element:    element,
+		validators: make([]Validator, 0),
 	}
 }
 
@@ -41,9 +40,13 @@ func (a *ArraySchema) Validate(ctx *Context) error {
 	}
 
 	return accessor.Iterate(func(idx int, childAccessor data.Accessor) error {
-		elemCtx := ctx.WithChild(fmt.Sprintf("[%d]", idx), a.elementSchema, childAccessor)
-		return a.elementSchema.Validate(elemCtx)
+		elemCtx := ctx.WithChild(fmt.Sprintf("[%d]", idx), a.element, childAccessor)
+		return a.element.Validate(elemCtx)
 	})
+}
+
+func (a *ArraySchema) Element() Schema {
+	return a.element
 }
 
 func (a *ArraySchema) AddValidator(v Validator) Schema {

@@ -16,6 +16,7 @@ const (
 
 // Accessor provides unified interface for accessing different data types
 type Accessor interface {
+	GetField(name string) (Accessor, error)
 	GetValue(path string) (*Value, error)
 	Raw() any
 }
@@ -44,7 +45,6 @@ func NewAccessor(rv reflect.Value) Accessor {
 
 type ObjectAccessor interface {
 	Accessor
-	GetField(name string) (Accessor, error)
 	Accessors() []ObjectAccessor
 }
 

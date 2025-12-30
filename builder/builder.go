@@ -13,17 +13,17 @@ type SchemaBuilder struct {
 
 // Field creates a new field schema builder
 func Field() *SchemaBuilder {
-	return &SchemaBuilder{schema: schema.NewFieldSchema(), registry: validators.DefaultRegistry()}
+	return &SchemaBuilder{schema: schema.NewField(), registry: validators.DefaultRegistry()}
 }
 
 // Array creates a new array schema builder
 func Array(elementSchema schema.Schema) *SchemaBuilder {
-	return &SchemaBuilder{schema: schema.NewArraySchema(elementSchema), registry: validators.DefaultRegistry()}
+	return &SchemaBuilder{schema: schema.NewArray(elementSchema), registry: validators.DefaultRegistry()}
 }
 
 // Object creates a new object schema builder
 func Object() *SchemaBuilder {
-	return &SchemaBuilder{schema: schema.NewObjectSchema(), registry: validators.DefaultRegistry()}
+	return &SchemaBuilder{schema: schema.NewObject(), registry: validators.DefaultRegistry()}
 }
 
 // FieldWithRegistry creates a new field schema builder with a custom registry

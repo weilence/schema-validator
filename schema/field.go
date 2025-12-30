@@ -5,8 +5,8 @@ type FieldSchema struct {
 	validators []Validator
 }
 
-// NewFieldSchema creates a new field schema
-func NewFieldSchema() *FieldSchema {
+// NewField creates a new field schema
+func NewField() *FieldSchema {
 	return &FieldSchema{
 		validators: make([]Validator, 0),
 	}

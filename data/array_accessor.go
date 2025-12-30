@@ -14,6 +14,21 @@ func NewArrayAccessor(v reflect.Value) *ArrayAccessor {
 	return &ArrayAccessor{value: v}
 }
 
+func (s *ArrayAccessor) GetField(name string) (Accessor, error) {
+	var idx int
+	n, err := fmt.Sscanf(name, "[%d]", &idx)
+	if err != nil || n != 1 {
+		return nil, errors.New("invalid array index in scan: " + name)
+	}
+
+	elemAcc, err := s.GetIndex(idx)
+	if err != nil {
+		return nil, fmt.Errorf("index %d out of bounds", idx)
+	}
+
+	return elemAcc, nil
+}
+
 func (s *ArrayAccessor) Raw() any {
 	return s.value.Interface()
 }
@@ -24,16 +39,9 @@ func (s *ArrayAccessor) GetValue(path string) (*Value, error) {
 	}
 
 	part, nextPath := cutPath(path)
-	// Parse index from path
-	var idx int
-	n, err := fmt.Sscanf(part, "[%d]", &idx)
-	if err != nil || n != 1 {
-		return nil, errors.New("invalid array index in scan: " + part)
-	}
-
-	elemAcc, err := s.GetIndex(idx)
+	elemAcc, err := s.GetField(part)
 	if err != nil {
-		return nil, fmt.Errorf("index %d out of bounds", idx)
+		return nil, err
 	}
 
 	return elemAcc.GetValue(nextPath)

@@ -1,8 +1,8 @@
 package schema
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 )
 
 var ErrCheckFailed = fmt.Errorf("validation check failed")
@@ -11,95 +11,63 @@ var ErrCheckFailed = fmt.Errorf("validation check failed")
 type ValidationError struct {
 	Path string
 
-	// Name is the validation error code (e.g., "required", "min", "eqfield")
-	Name string
+	// Code is the validation error code (e.g., "required", "min", "eqfield")
+	Code string
 
-	// Params contains additional error parameters (e.g., min value, field name)
+	// Params contains error parameters (positional)
 	Params []any
 
 	Err error
 }
 
-func NewValidationError(path, name string, params []any, err error) *ValidationError {
-	return &ValidationError{
-		Path:   path,
-		Name:   name,
-		Params: params,
-		Err:    err,
-	}
+func (e ValidationError) Unwrap() error {
+	return e.Err
 }
 
 // Error implements the error interface
-func (e *ValidationError) Error() string {
+func (e ValidationError) Error() string {
 	if len(e.Params) > 0 {
-		return fmt.Sprintf("%s: %s %v", e.Path, e.Name, e.Params)
+		return fmt.Sprintf("%s: %s %v", e.Path, e.Code, e.Params)
 	}
-	return fmt.Sprintf("%s: %s", e.Path, e.Name)
+	return fmt.Sprintf("%s: %s", e.Path, e.Code)
 }
 
-// ValidationResult holds all validation errors
-type ValidationResult struct {
-	errors []*ValidationError
-}
+// ValidationErrors holds all validation errors
+type ValidationErrors []ValidationError
 
-// NewValidationResult creates a new validation result
-func NewValidationResult() *ValidationResult {
-	return &ValidationResult{
-		errors: make([]*ValidationError, 0),
-	}
-}
-
-func (r *ValidationResult) Error() string {
-	var sb strings.Builder
-
-	for i, err := range r.errors {
-		if i > 0 {
-			sb.WriteString("\n")
-		}
-		sb.WriteString(err.Error())
+func (r ValidationErrors) Unwrap() []error {
+	if len(r) == 0 {
+		return nil
 	}
 
-	return sb.String()
+	errs := make([]error, len(r))
+	for i, err := range r {
+		errs[i] = err
+	}
+
+	return errs
+}
+
+func (r ValidationErrors) Error() string {
+	errs := r.Unwrap()
+	if len(errs) == 0 {
+		return ""
+	}
+
+	return errors.Join(errs...).Error()
 }
 
 // AddError adds a validation error to the result
-func (r *ValidationResult) AddError(err *ValidationError) {
-	r.errors = append(r.errors, err)
+func (r *ValidationErrors) AddError(err ValidationError) {
+	*r = append(*r, err)
 }
 
-// Errors returns all validation errors
-func (r *ValidationResult) Errors() []*ValidationError {
-	return r.errors
-}
-
-// IsValid returns true if there are no validation errors
-func (r *ValidationResult) IsValid() bool {
-	return len(r.errors) == 0
-}
-
-// FirstError returns the first validation error, or nil if there are none
-func (r *ValidationResult) FirstError() *ValidationError {
-	if len(r.errors) > 0 {
-		return r.errors[0]
-	}
-	return nil
-}
-
-// ErrorsByField groups errors by field path
-func (r *ValidationResult) ErrorsByField() map[string][]*ValidationError {
-	result := make(map[string][]*ValidationError)
-	for _, err := range r.errors {
-		result[err.Path] = append(result[err.Path], err)
-	}
-	return result
-}
-
-// HasFieldError checks if a specific field has an error
-func (r *ValidationResult) HasFieldError(fieldPath string) bool {
-	for _, err := range r.errors {
-		if err.Path == fieldPath {
+func (r ValidationErrors) HasFieldError(field string) bool {
+	for _, err := range r {
+		if err.Path == field {
 			return true
 		}
 	}
+
 	return false
 }

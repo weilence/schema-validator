@@ -51,7 +51,7 @@ func TestTagBasedValidation(t *testing.T) {
 		t.Error("Expected validation errors for password mismatch")
 	} else {
 		switch e := err.(type) {
-		case *schema.ValidationResult:
+		case schema.ValidationErrors:
 			if !e.HasFieldError("confirm") {
 				t.Error("Expected error on confirm field")
 			}
@@ -77,7 +77,7 @@ func TestTagBasedValidation(t *testing.T) {
 		t.Error("Expected validation errors for missing email")
 	} else {
 		switch e := err.(type) {
-		case *schema.ValidationResult:
+		case schema.ValidationErrors:
 			if !e.HasFieldError("email") {
 				t.Error("Expected error on email field")
 			}
@@ -125,7 +125,7 @@ func TestCodeBasedValidation(t *testing.T) {
 		t.Error("Expected validation errors for invalid email")
 	} else {
 		switch e := err.(type) {
-		case *schema.ValidationResult:
+		case schema.ValidationErrors:
 			if !e.HasFieldError("email") {
 				t.Error("Expected error on email field")
 			}
@@ -183,7 +183,7 @@ func TestEmbeddedStructWithPrivateFields(t *testing.T) {
 		t.Error("Expected validation errors for missing street")
 	} else {
 		switch e := err.(type) {
-		case *schema.ValidationResult:
+		case schema.ValidationErrors:
 			if !e.HasFieldError("street") {
 				t.Error("Expected error on street field")
 			}
@@ -228,7 +228,7 @@ func TestArrayValidation(t *testing.T) {
 		t.Error("Expected validation errors for empty array")
 	} else {
 		switch e := err.(type) {
-		case *schema.ValidationResult:
+		case schema.ValidationErrors:
 			if !e.HasFieldError("items") {
 				t.Error("Expected error on items field")
 			}
@@ -363,7 +363,7 @@ func TestSchemaModifier(t *testing.T) {
 		t.Error("Expected validation to fail when required=true and value is empty")
 	} else {
 		switch e := err.(type) {
-		case *schema.ValidationResult:
+		case schema.ValidationErrors:
 			if !e.HasFieldError("value") {
 				t.Error("Expected error on value field when required=true")
 			}

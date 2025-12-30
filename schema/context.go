@@ -14,7 +14,32 @@ type Context struct {
 
 	// 上下文信息
 	parent *Context
-	path   string
+	path   contextPath
+
+	// 收集的错误
+	errs *ValidationErrors
+}
+
+type contextPath []string
+
+func newContextPath(p contextPath, field string) contextPath {
+	newPath := make(contextPath, len(p)+1)
+	copy(newPath, p)
+	newPath[len(p)] = field
+	return newPath
+}
+
+func (p contextPath) String() string {
+	var sb strings.Builder
+	for i, segment := range p {
+		if i > 0 && segment[0] != '[' {
+			sb.WriteString(".")
+		}
+
+		sb.WriteString(segment)
+	}
+
+	return sb.String()
 }
 
 // NewContext 创建根 context
@@ -22,23 +47,15 @@ func NewContext(schema Schema, accessor data.Accessor) *Context {
 	ctx := &Context{
 		schema:   schema,
 		accessor: accessor,
-
-		path: "",
+		errs:     &ValidationErrors{},
 	}
 
 	return ctx
 }
 
 // WithChild 创建子 context（用于字段/元素验证）
-func (c *Context) WithChild(segment string, childSchema Schema, childAccessor data.Accessor) *Context {
-	newPath := segment
-	if c.path != "" {
-		if strings.HasPrefix(segment, "[") {
-			newPath = c.path + segment
-		} else {
-			newPath = c.path + "." + segment
-		}
-	}
+func (c *Context) WithChild(field string, childSchema Schema, childAccessor data.Accessor) *Context {
+	newPath := newContextPath(c.path, field)
 
 	return &Context{
 		schema:   childSchema,
@@ -46,6 +63,7 @@ func (c *Context) WithChild(segment string, childSchema Schema, childAccessor da
 
 		parent: c,
 		path:   newPath,
+		errs:   c.errs,
 	}
 }
 
@@ -61,7 +79,7 @@ func (c *Context) Accessor() data.Accessor {
 
 // Path 返回当前路径
 func (c *Context) Path() string {
-	return c.path
+	return contextPath(c.path).String()
 }
 
 func (c *Context) Value() *data.Value {
@@ -81,6 +99,18 @@ func (c *Context) Parent() *Context {
 	return c.parent
 }
 
-func (c *Context) SkipRest() bool {
-	return c.skipRest
+func (c *Context) SkipRest() {
+	c.skipRest = true
+}
+
+func (c *Context) AddError(err ValidationError) {
+	c.errs.AddError(err)
+}
+
+func (c *Context) Errors() ValidationErrors {
+	if c.errs == nil {
+		return nil
+	}
+
+	return *c.errs
 }

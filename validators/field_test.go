@@ -38,9 +38,9 @@ func Test_compareFieldValidator(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := schema.NewObjectSchema().
-				AddField("Field1", schema.NewFieldSchema().AddValidator(r.NewValidator(tt.ruleName, "Field2"))).
-				AddField("Field2", schema.NewFieldSchema())
+			s := schema.NewObject().
+				AddField("Field1", schema.NewField().AddValidator(r.NewValidator(tt.ruleName, "Field2"))).
+				AddField("Field2", schema.NewField())
 			ctx := schema.NewContext(s, data.New(tt.value))
 			err := s.Validate(ctx)
 			if tt.errStr == "" {
@@ -48,7 +48,7 @@ func Test_compareFieldValidator(t *testing.T) {
 				return
 			}
 
-			assert.ErrorContains(t, err, tt.errStr)
+			assert.ErrorContains(t, ctx.Errors(), tt.errStr)
 		})
 	}
 }

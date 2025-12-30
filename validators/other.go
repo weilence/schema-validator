@@ -32,10 +32,6 @@ func registerOther(r *Registry) {
 
 	r.Register("oneof", func(ctx *schema.Context, params []string) error {
 		val := ctx.Value().String()
-		if val == "" {
-			return nil
-		}
-
 		if slices.Contains(params, val) {
 			return nil
 		}

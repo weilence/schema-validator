@@ -5,4 +5,3 @@ type Validator interface {
 	Params() []any
 	Validate(ctx *Context) error
 }
-

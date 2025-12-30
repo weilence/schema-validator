@@ -1,6 +1,7 @@
 package validators
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -57,7 +58,7 @@ func NewRegistry() *Registry {
 }
 
 // Register registers a field validator factory
-func (r *Registry) Register(name string, fn any) {
+func (r *Registry) Register(code string, fn any) {
 	rv := reflect.ValueOf(fn)
 	rvType := rv.Type()
 	if rvType.Kind() != reflect.Func {
@@ -79,14 +80,13 @@ func (r *Registry) Register(name string, fn any) {
 	if typedFn, ok := fn.(func(*schema.Context, []any) error); ok {
 		newFn = typedFn
 	} else {
-		newFn = func(ctx *schema.Context, params []any) error {
+		newFn = func(ctx *schema.Context, params []any) (err error) {
 			defer func() {
 				if r := recover(); r != nil {
-					panic(fmt.Errorf("validator factory panic: name=%s, params=%v, err=%v", name, params, r))
+					err = fmt.Errorf("validator factory panic: name=%s, params=%v, err=%v", code, params, r)
 				}
 			}()
 
-			var err error
 			rvParams := make([]reflect.Value, len(rvParamTypes)+1)
 			rvParams[0] = reflect.ValueOf(ctx)
 			for i, param := range params {
@@ -100,26 +100,37 @@ func (r *Registry) Register(name string, fn any) {
 
 			out := outs[0].Interface()
 			if out != nil {
-				err = out.(error)
-			}
-
-			if err != nil {
-				return &schema.ValidationError{
-					Path:   ctx.Path(),
-					Name:   name,
-					Params: params,
-					Err:    err,
-				}
+				return out.(error)
 			}
 
 			return nil
 		}
 	}
 
-	r.validators[name] = validatorFactory{
-		name:       name,
+	newFn2 := func(ctx *schema.Context, params []any) error {
+		err := newFn(ctx, params)
+		if err != nil {
+			newErr := schema.ValidationError{
+				Path:   ctx.Path(),
+				Code:   code,
+				Params: params,
+				Err:    err,
+			}
+
+			if errors.Is(err, schema.ErrCheckFailed) {
+				ctx.AddError(newErr)
+			} else {
+				return newErr
+			}
+		}
+
+		return nil
+	}
+
+	r.validators[code] = validatorFactory{
+		name:       code,
 		paramTypes: rvParamTypes,
-		fn:         newFn,
+		fn:         newFn2,
 	}
 }
 

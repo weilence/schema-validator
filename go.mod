@@ -3,9 +3,13 @@ module github.com/weilence/schema-validator
 go 1.24.0
 
 require (
+	github.com/BurntSushi/toml v1.5.0
 	github.com/miekg/dns v1.1.69
+	github.com/nicksnyder/go-i18n/v2 v2.6.0
 	github.com/spf13/cast v1.10.0
 	github.com/stretchr/testify v1.11.1
+	golang.org/x/text v0.32.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -13,8 +17,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/tools v0.39.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

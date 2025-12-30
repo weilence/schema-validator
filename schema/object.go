@@ -13,8 +13,8 @@ type ObjectSchema struct {
 	validators   []Validator
 }
 
-// NewObjectSchema creates a new object schema
-func NewObjectSchema() *ObjectSchema {
+// NewObject creates a new object schema
+func NewObject() *ObjectSchema {
 	return &ObjectSchema{
 		fields:       make(map[string]Schema),
 		fieldNameMap: make(map[string]string),
@@ -61,6 +61,10 @@ func (o *ObjectSchema) Validate(ctx *Context) error {
 	}
 
 	return nil
+}
+
+func (o *ObjectSchema) Field(name string) Schema {
+	return o.fields[name]
 }
 
 // AddField adds a field schema
@@ -110,7 +114,7 @@ func mergeSchema(s1, s2 Schema) Schema {
 		return s
 	case *ArraySchema:
 		as2 := s2.(*ArraySchema)
-		s.elementSchema = mergeSchema(s.elementSchema, as2.elementSchema)
+		s.element = mergeSchema(s.element, as2.element)
 		for _, v := range as2.validators {
 			s.AddValidator(v)
 		}

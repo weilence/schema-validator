@@ -76,7 +76,7 @@ func parse(rt reflect.Type, cfg *ParseConfig) (*schema.ObjectSchema, error) {
 		rt = rt.Elem()
 	}
 
-	objSchema := schema.NewObjectSchema()
+	objSchema := schema.NewObject()
 	for i := 0; i < rt.NumField(); i++ {
 		field := rt.Field(i)
 		if err := parseStructField(objSchema, field, cfg); err != nil {
@@ -152,7 +152,7 @@ func parseField(fieldType reflect.Type, tags []TagRule, cfg *ParseConfig) (schem
 			return nil, err
 		}
 
-		arraySchema := schema.NewArraySchema(elemSchema)
+		arraySchema := schema.NewArray(elemSchema)
 
 		for _, rule := range arrayTags {
 			params := convertValidatorParams(rule.Name, rule.Params, cfg)
@@ -174,11 +174,11 @@ func parseField(fieldType reflect.Type, tags []TagRule, cfg *ParseConfig) (schem
 	// Handle map types
 	if fieldType.Kind() == reflect.Map {
 		// For maps, create an object schema
-		return schema.NewObjectSchema(), nil
+		return schema.NewObject(), nil
 	}
 
 	// Primitive field
-	fieldSchema := schema.NewFieldSchema()
+	fieldSchema := schema.NewField()
 	for _, tag := range tags {
 		params := convertValidatorParams(tag.Name, tag.Params, cfg)
 		v := cfg.registry.NewValidator(tag.Name, params...)
