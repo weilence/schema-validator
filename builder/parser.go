@@ -474,7 +474,7 @@ func getFieldName(field reflect.StructField) string {
 	if name := extractNameFromTag(field.Tag.Get("json")); name != "" {
 		return name
 	}
-	if name := extractNameFromTag(field.Tag.Get("path")); name != "" {
+	if name := extractNameFromTag(field.Tag.Get("param")); name != "" {
 		return name
 	}
 	if name := extractNameFromTag(field.Tag.Get("query")); name != "" {

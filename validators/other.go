@@ -40,7 +40,8 @@ func registerOther(r *Registry) {
 	})
 
 	requiredFn := func(ctx *schema.Context) error {
-		if ctx.Value().IsNilOrZero() {
+		v := ctx.Value()
+		if v.IsNilOrZero() {
 			return schema.ErrCheckFailed
 		}
 
