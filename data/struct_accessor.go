@@ -12,10 +12,6 @@ type structAccessor struct {
 }
 
 func NewStructAccessor(v reflect.Value) *structAccessor {
-	if v.Kind() == reflect.Pointer {
-		v = v.Elem()
-	}
-
 	var embedValues []*structAccessor
 	for i := 0; i < v.NumField(); i++ {
 		field := v.Type().Field(i)

@@ -112,12 +112,17 @@ func compareValue(ct compareType, currentValue, otherValue *data.Value) (bool, e
 			return false, err
 		}
 
-		b, err := cast.ToE[string](otherValue.Raw())
+		b, err := cast.ToE[int](otherValue.Raw())
 		if err != nil {
-			return false, err
+			bStr, err := cast.ToE[string](otherValue.Raw())
+			if err != nil {
+				return false, err
+			}
+
+			b = len(bStr)
 		}
 
-		return compareFn(ct, len(a), len(b)), nil
+		return compareFn(ct, len(a), b), nil
 	default:
 		if currentValue.IsSliceOrArray()  {
 			b := cast.ToInt(otherValue.Raw())

@@ -56,6 +56,10 @@ func (p *Value) IsFloat() bool {
 	return p.rval.CanFloat()
 }
 
+func (p *Value) IsString() bool {
+	return p.rval.Kind() == reflect.String
+}
+
 func (p *Value) IsSliceOrArray() bool {
 	kind := p.Kind()
 	return kind == reflect.Slice || kind == reflect.Array
