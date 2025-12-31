@@ -71,3 +71,13 @@ func (r ValidationErrors) HasFieldError(field string) bool {
 
 	return false
 }
+
+func (r ValidationErrors) Translate(translator func(err ValidationError) string) map[string][]string {
+	res := make(map[string][]string)
+	for _, err := range r {
+		msg := translator(err)
+		res[err.Path] = append(res[err.Path], msg)
+	}
+
+	return res
+}

@@ -3,52 +3,52 @@
 # Arg1, Arg2, ...: positional parameters from validator
 
 required:
-  other: "{{.Path}} is required"
+  other: "This field is required"
 
 min:
-  other: "{{.Path}} must be at least {{.Arg1}}"
+  other: "Must be at least {{.Arg1}}"
 
 max:
-  other: "{{.Path}} must be at most {{.Arg1}}"
+  other: "Must be at most {{.Arg1}}"
 
 email:
-  other: "{{.Path}} must be a valid email address"
+  other: "Must be a valid email address"
 
 pattern:
-  other: "{{.Path}} format is invalid"
+  other: "Format is invalid"
 
 oneof:
-  other: "{{.Path}} must be one of: {{.Arg1}}"
+  other: "Must be one of: {{.Arg1}}"
 
 eqfield:
-  other: "{{.Path}} must be equal to {{.Arg1}}"
+  other: "Must be equal to {{.Arg1}}"
 
 nefield:
-  other: "{{.Path}} must not be equal to {{.Arg1}}"
+  other: "Must not be equal to {{.Arg1}}"
 
 gtfield:
-  other: "{{.Path}} must be greater than {{.Arg1}}"
+  other: "Must be greater than {{.Arg1}}"
 
 ltfield:
-  other: "{{.Path}} must be less than {{.Arg1}}"
+  other: "Must be less than {{.Arg1}}"
 
 gtefield:
-  other: "{{.Path}} must be greater than or equal to {{.Arg1}}"
+  other: "Must be greater than or equal to {{.Arg1}}"
 
 ltefield:
-  other: "{{.Path}} must be less than or equal to {{.Arg1}}"
+  other: "Must be less than or equal to {{.Arg1}}"
 
 required_if:
-  other: "{{.Path}} is required when {{.Arg1}} is {{.Arg2}}"
+  other: "This field is required when {{.Arg1}} is {{.Arg2}}"
 
 ip:
-  other: "{{.Path}} must be a valid IP address"
+  other: "Must be a valid IP address"
 
 port:
-  other: "{{.Path}} must be a valid port number (1-65535)"
+  other: "Must be a valid port number (1-65535)"
 
 domain:
-  other: "{{.Path}} must be a valid domain name"
+  other: "Must be a valid domain name"
 
 url:
-  other: "{{.Path}} must be a valid URL"
+  other: "Must be a valid URL"

@@ -27,15 +27,15 @@ func TestTranslator_TranslateError(t *testing.T) {
 	translator := NewTranslator(language.English)
 
 	translator.Bundle().MustAddMessages(language.English,
-		&i18n.Message{ID: "required", Other: "{{.Path}} is required"},
-		&i18n.Message{ID: "min", Other: "{{.Path}} must be at least {{.Arg1}}"},
-		&i18n.Message{ID: "eqfield", Other: "{{.Path}} must be equal to {{.Arg1}}"},
+		&i18n.Message{ID: "required", Other: "This field is required"},
+		&i18n.Message{ID: "min", Other: "Must be at least {{.Arg1}}"},
+		&i18n.Message{ID: "eqfield", Other: "Must be equal to {{.Arg1}}"},
 	)
 
 	translator.Bundle().MustAddMessages(language.SimplifiedChinese,
-		&i18n.Message{ID: "required", Other: "{{.Path}} 为必填项"},
-		&i18n.Message{ID: "min", Other: "{{.Path}} 最小值为 {{.Arg1}}"},
-		&i18n.Message{ID: "eqfield", Other: "{{.Path}} 必须等于 {{.Arg1}}"},
+		&i18n.Message{ID: "required", Other: "该字段为必填项"},
+		&i18n.Message{ID: "min", Other: "最小值为 {{.Arg1}}"},
+		&i18n.Message{ID: "eqfield", Other: "必须等于 {{.Arg1}}"},
 	)
 
 	tests := []struct {
@@ -52,7 +52,7 @@ func TestTranslator_TranslateError(t *testing.T) {
 				Code:   "required",
 				Params: []any{},
 			},
-			expected: "username is required",
+			expected: "This field is required",
 		},
 		{
 			name: "required in Chinese",
@@ -62,7 +62,7 @@ func TestTranslator_TranslateError(t *testing.T) {
 				Code:   "required",
 				Params: []any{},
 			},
-			expected: "username 为必填项",
+			expected: "该字段为必填项",
 		},
 		{
 			name: "min with param in English",
@@ -72,7 +72,7 @@ func TestTranslator_TranslateError(t *testing.T) {
 				Code:   "min",
 				Params: []any{18},
 			},
-			expected: "age must be at least 18",
+			expected: "Must be at least 18",
 		},
 		{
 			name: "min with param in Chinese",
@@ -82,7 +82,7 @@ func TestTranslator_TranslateError(t *testing.T) {
 				Code:   "min",
 				Params: []any{18},
 			},
-			expected: "age 最小值为 18",
+			expected: "最小值为 18",
 		},
 		{
 			name: "eqfield in English",
@@ -92,7 +92,7 @@ func TestTranslator_TranslateError(t *testing.T) {
 				Code:   "eqfield",
 				Params: []any{"password"},
 			},
-			expected: "confirmPassword must be equal to password",
+			expected: "Must be equal to password",
 		},
 	}
 

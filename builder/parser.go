@@ -471,15 +471,24 @@ func isValidatorName(s string) bool {
 }
 
 func getFieldName(field reflect.StructField) string {
-	// Check json tag first
-	if jsonTag := field.Tag.Get("json"); jsonTag != "" && jsonTag != "-" {
-		// Extract name before comma
-		if idx := strings.Index(jsonTag, ","); idx != -1 {
-			return jsonTag[:idx]
-		}
-		return jsonTag
+	if name := extractNameFromTag(field.Tag.Get("json")); name != "" {
+		return name
 	}
-
-	// Default to field name
+	if name := extractNameFromTag(field.Tag.Get("path")); name != "" {
+		return name
+	}
+	if name := extractNameFromTag(field.Tag.Get("query")); name != "" {
+		return name
+	}
 	return field.Name
+}
+
+func extractNameFromTag(tag string) string {
+	if tag == "" || tag == "-" {
+		return ""
+	}
+	if idx := strings.Index(tag, ","); idx != -1 {
+		return tag[:idx]
+	}
+	return tag
 }
