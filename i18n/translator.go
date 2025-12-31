@@ -21,18 +21,25 @@ type Translator struct {
 
 // NewTranslator creates a new Translator with the given default language
 // It automatically loads embedded English and Chinese message files
-func NewTranslator(defaultLang language.Tag) *Translator {
+func NewTranslator(defaultLang language.Tag) (*Translator, error) {
 	bundle := i18n.NewBundle(defaultLang)
 	bundle.RegisterUnmarshalFunc("yaml", yaml.Unmarshal)
 	
 	// Load embedded message files
-	bundle.LoadMessageFileFS(messageFiles, "messages/active.en.yaml")
-	bundle.LoadMessageFileFS(messageFiles, "messages/active.zh-CN.yaml")
+	_, err := bundle.LoadMessageFileFS(messageFiles, "messages/active.en.yaml")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load message file: %w", err)
+	}
+
+	_, err = bundle.LoadMessageFileFS(messageFiles, "messages/active.zh-CN.yaml")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load message file: %w", err)
+	}
 	
 	return &Translator{
 		bundle:     bundle,
 		localizers: make(map[string]*i18n.Localizer),
-	}
+	}, nil
 }
 
 // Bundle returns the underlying i18n.Bundle for loading message files

@@ -5,12 +5,14 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/stretchr/testify/assert"
 	"github.com/weilence/schema-validator/schema"
 	"golang.org/x/text/language"
 )
 
 func TestTranslator_Localize(t *testing.T) {
-	translator := NewTranslator(language.English)
+	translator, err := NewTranslator(language.English)
+	assert.NoError(t, err)
 	translator.Bundle().RegisterUnmarshalFunc("toml", toml.Unmarshal)
 
 	translator.Bundle().MustAddMessages(language.English,
@@ -24,7 +26,8 @@ func TestTranslator_Localize(t *testing.T) {
 }
 
 func TestTranslator_TranslateError(t *testing.T) {
-	translator := NewTranslator(language.English)
+	translator, err := NewTranslator(language.English)
+	assert.NoError(t, err)
 
 	translator.Bundle().MustAddMessages(language.English,
 		&i18n.Message{ID: "required", Other: "This field is required"},
