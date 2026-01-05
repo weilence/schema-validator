@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/weilence/schema-validator/data"
 )
@@ -24,11 +25,22 @@ func NewObject() *ObjectSchema {
 
 // Validate validates an object
 func (o *ObjectSchema) Validate(ctx *Context) error {
-	oa := ctx.Accessor().(data.ObjectAccessor)
-	for _, accessor := range oa.Accessors() {
-		if v, ok := accessor.Raw().(SchemaModifier); ok {
-			v.ModifySchema(ctx)
+	accessor := ctx.Accessor()
+	switch oa := accessor.(type) {
+	case data.ObjectAccessor:
+		for _, accessor := range oa.Accessors() {
+			if v, ok := accessor.Raw().(SchemaModifier); ok {
+				v.ModifySchema(ctx)
+			}
 		}
+	case *data.Value:
+		if oa.Kind() == reflect.Invalid {
+			return nil
+		}
+
+		return fmt.Errorf("expected object accessor, got primitive value")
+	default:
+		return fmt.Errorf("expected object accessor, got %T", oa)
 	}
 
 	for _, validator := range o.validators {
@@ -47,7 +59,7 @@ func (o *ObjectSchema) Validate(ctx *Context) error {
 			fieldName = mappedName
 		}
 
-		fieldData, err := oa.GetField(fieldName)
+		fieldData, err := accessor.GetField(fieldName)
 		if err != nil {
 			return fmt.Errorf("error accessing field %s: %w", fieldName, err)
 		}
