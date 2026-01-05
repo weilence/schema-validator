@@ -75,6 +75,11 @@ func (p *Value) Int() int64 {
 	return cast.Must[int64](cast.ToInt64E(p.rval.Interface()))
 }
 
+// Int returns int64 value
+func (p *Value) IntE() (int64, error) {
+	return cast.ToInt64E(p.rval.Interface())
+}
+
 // Float returns float64 value
 func (p *Value) Float() float64 {
 	return cast.Must[float64](cast.ToFloat64E(p.rval.Interface()))

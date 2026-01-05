@@ -1,0 +1,497 @@
+# English validation messages
+# Path: field path being validated
+# Arg1, Arg2, ...: positional parameters from validator
+
+required:
+  other: "This field is required"
+
+min:
+  other: "Must be at least {{.Arg1}}"
+
+max:
+  other: "Must be at most {{.Arg1}}"
+
+email:
+  other: "Must be a valid email address"
+
+pattern:
+  other: "Format is invalid"
+
+oneof:
+  other: "Must be one of: {{.Arg1}}"
+
+eqfield:
+  other: "Must be equal to {{.Arg1}}"
+
+nefield:
+  other: "Must not be equal to {{.Arg1}}"
+
+gtfield:
+  other: "Must be greater than {{.Arg1}}"
+
+ltfield:
+  other: "Must be less than {{.Arg1}}"
+
+gtefield:
+  other: "Must be greater than or equal to {{.Arg1}}"
+
+ltefield:
+  other: "Must be less than or equal to {{.Arg1}}"
+
+required_if:
+  other: "This field is required when {{.Arg1}} is {{.Arg2}}"
+
+ip:
+  other: "Must be a valid IP address"
+
+port:
+  other: "Must be a valid port number (1-65535)"
+
+domain:
+  other: "Must be a valid domain name"
+
+url:
+  other: "Must be a valid URL"
+
+# Additional validators
+
+# Other validators
+dir:
+  other: "Must be a valid directory"
+
+dirpath:
+  other: "Must be a valid directory path"
+
+file:
+  other: "Must be a valid file"
+
+filepath:
+  other: "Must be a valid file path"
+
+image:
+  other: "Must be a valid image file"
+
+isdefault:
+  other: "Must be the default value"
+
+len:
+  other: "Must be exactly {{.Arg1}} characters long"
+
+required_unless:
+  other: "This field is required unless {{.Arg1}} is {{.Arg2}}"
+
+required_with:
+  other: "This field is required when {{.Arg1}} is present"
+
+required_with_all:
+  other: "This field is required when all of {{.Arg1}} are present"
+
+required_without:
+  other: "This field is required when {{.Arg1}} is not present"
+
+required_without_all:
+  other: "This field is required when none of {{.Arg1}} are present"
+
+excluded_if:
+  other: "This field must not be present when {{.Arg1}} is {{.Arg2}}"
+
+excluded_unless:
+  other: "This field must not be present unless {{.Arg1}} is {{.Arg2}}"
+
+excluded_with:
+  other: "This field must not be present when {{.Arg1}} is present"
+
+excluded_with_all:
+  other: "This field must not be present when all of {{.Arg1}} are present"
+
+excluded_without:
+  other: "This field must not be present when {{.Arg1}} is not present"
+
+excluded_without_all:
+  other: "This field must not be present when none of {{.Arg1}} are present"
+
+unique:
+  other: "Must contain unique values"
+
+omitempty:
+  other: "This field is optional"
+
+# String validators
+alpha:
+  other: "Must contain only letters"
+
+alphaspace:
+  other: "Must contain only letters and spaces"
+
+alphanum:
+  other: "Must contain only letters and numbers"
+
+alphanumspace:
+  other: "Must contain only letters, numbers, and spaces"
+
+alphanumunicode:
+  other: "Must contain only Unicode letters and numbers"
+
+alphaunicode:
+  other: "Must contain only Unicode letters"
+
+ascii:
+  other: "Must contain only ASCII characters"
+
+boolean:
+  other: "Must be a valid boolean value"
+
+contains:
+  other: "Must contain '{{.Arg1}}'"
+
+containsany:
+  other: "Must contain at least one of '{{.Arg1}}'"
+
+containsrune:
+  other: "Must contain the rune '{{.Arg1}}'"
+
+endsnotwith:
+  other: "Must not end with '{{.Arg1}}'"
+
+endswith:
+  other: "Must end with '{{.Arg1}}'"
+
+excludes:
+  other: "Must not contain '{{.Arg1}}'"
+
+excludesall:
+  other: "Must not contain any of '{{.Arg1}}'"
+
+excludesrune:
+  other: "Must not contain the rune '{{.Arg1}}'"
+
+lowercase:
+  other: "Must be lowercase"
+
+multibyte:
+  other: "Must contain multibyte characters"
+
+number:
+  other: "Must contain only digits"
+
+numeric:
+  other: "Must be a valid number"
+
+printascii:
+  other: "Must contain only printable ASCII characters"
+
+startsnotwith:
+  other: "Must not start with '{{.Arg1}}'"
+
+startswith:
+  other: "Must start with '{{.Arg1}}'"
+
+uppercase:
+  other: "Must be uppercase"
+
+# Format validators
+base64:
+  other: "Must be a valid base64 string"
+
+base64url:
+  other: "Must be a valid base64url string"
+
+base64rawurl:
+  other: "Must be a valid base64rawurl string"
+
+bic_iso_9362_2014:
+  other: "Must be a valid BIC (ISO 9362:2014)"
+
+bic:
+  other: "Must be a valid BIC"
+
+bcp47_language_tag:
+  other: "Must be a valid BCP47 language tag"
+
+btc_addr:
+  other: "Must be a valid Bitcoin address"
+
+btc_addr_bech32:
+  other: "Must be a valid Bitcoin Bech32 address"
+
+credit_card:
+  other: "Must be a valid credit card number"
+
+mongodb:
+  other: "Must be a valid MongoDB ObjectID"
+
+mongodb_connection_string:
+  other: "Must be a valid MongoDB connection string"
+
+cron:
+  other: "Must be a valid cron expression"
+
+spicedb:
+  other: "Must be a valid SpiceDB resource"
+
+datetime:
+  other: "Must be a valid date and time"
+
+e164:
+  other: "Must be a valid E164 phone number"
+
+ein:
+  other: "Must be a valid EIN"
+
+eth_addr:
+  other: "Must be a valid Ethereum address"
+
+hexadecimal:
+  other: "Must be a valid hexadecimal string"
+
+hexcolor:
+  other: "Must be a valid hex color"
+
+hsl:
+  other: "Must be a valid HSL color"
+
+hsla:
+  other: "Must be a valid HSLA color"
+
+html:
+  other: "Must contain HTML"
+
+html_encoded:
+  other: "Must be HTML encoded"
+
+isbn:
+  other: "Must be a valid ISBN"
+
+isbn10:
+  other: "Must be a valid ISBN-10"
+
+isbn13:
+  other: "Must be a valid ISBN-13"
+
+issn:
+  other: "Must be a valid ISSN"
+
+iso3166_1_alpha2:
+  other: "Must be a valid ISO 3166-1 alpha-2 country code"
+
+iso3166_1_alpha3:
+  other: "Must be a valid ISO 3166-1 alpha-3 country code"
+
+iso3166_1_alpha_numeric:
+  other: "Must be a valid ISO 3166-1 numeric country code"
+
+iso3166_2:
+  other: "Must be a valid ISO 3166-2 subdivision code"
+
+iso4217:
+  other: "Must be a valid ISO 4217 currency code"
+
+json:
+  other: "Must be valid JSON"
+
+jwt:
+  other: "Must be a valid JWT"
+
+latitude:
+  other: "Must be a valid latitude (-90 to 90)"
+
+longitude:
+  other: "Must be a valid longitude (-180 to 180)"
+
+luhn_checksum:
+  other: "Must pass Luhn checksum validation"
+
+postcode_iso3166_alpha2:
+  other: "Must be a valid postcode for the specified country"
+
+postcode_iso3166_alpha2_field:
+  other: "Must be a valid postcode for the country in the specified field"
+
+rgb:
+  other: "Must be a valid RGB color"
+
+rgba:
+  other: "Must be a valid RGBA color"
+
+ssn:
+  other: "Must be a valid SSN"
+
+timezone:
+  other: "Must be a valid timezone"
+
+uuid:
+  other: "Must be a valid UUID"
+
+uuid3:
+  other: "Must be a valid UUID v3"
+
+uuid3_rfc4122:
+  other: "Must be a valid RFC 4122 UUID v3"
+
+uuid4:
+  other: "Must be a valid UUID v4"
+
+uuid4_rfc4122:
+  other: "Must be a valid RFC 4122 UUID v4"
+
+uuid5:
+  other: "Must be a valid UUID v5"
+
+uuid5_rfc4122:
+  other: "Must be a valid RFC 4122 UUID v5"
+
+uuid_rfc4122:
+  other: "Must be a valid RFC 4122 UUID"
+
+md4:
+  other: "Must be a valid MD4 hash"
+
+md5:
+  other: "Must be a valid MD5 hash"
+
+sha256:
+  other: "Must be a valid SHA256 hash"
+
+sha384:
+  other: "Must be a valid SHA384 hash"
+
+sha512:
+  other: "Must be a valid SHA512 hash"
+
+ripemd128:
+  other: "Must be a valid RIPEMD-128 hash"
+
+ripemd160:
+  other: "Must be a valid RIPEMD-160 hash"
+
+tiger128:
+  other: "Must be a valid Tiger-128 hash"
+
+tiger160:
+  other: "Must be a valid Tiger-160 hash"
+
+tiger192:
+  other: "Must be a valid Tiger-192 hash"
+
+semver:
+  other: "Must be a valid semantic version"
+
+ulid:
+  other: "Must be a valid ULID"
+
+cve:
+  other: "Must be a valid CVE identifier"
+
+# Network validators
+cidr:
+  other: "Must be a valid CIDR notation"
+
+cidrv4:
+  other: "Must be a valid IPv4 CIDR notation"
+
+cidrv6:
+  other: "Must be a valid IPv6 CIDR notation"
+
+datauri:
+  other: "Must be a valid data URI"
+
+fqdn:
+  other: "Must be a valid FQDN"
+
+hostname:
+  other: "Must be a valid hostname"
+
+hostname_rfc1123:
+  other: "Must be a valid RFC 1123 hostname"
+
+hostname_port:
+  other: "Must be a valid hostname:port"
+
+ip4_addr:
+  other: "Must be a valid IPv4 address"
+
+ip6_addr:
+  other: "Must be a valid IPv6 address"
+
+ip_addr:
+  other: "Must be a valid IP address"
+
+ipv4:
+  other: "Must be a valid IPv4 address"
+
+ipv6:
+  other: "Must be a valid IPv6 address"
+
+mac:
+  other: "Must be a valid MAC address"
+
+tcp4_addr:
+  other: "Must be a valid IPv4 TCP address"
+
+tcp6_addr:
+  other: "Must be a valid IPv6 TCP address"
+
+tcp_addr:
+  other: "Must be a valid TCP address"
+
+udp4_addr:
+  other: "Must be a valid IPv4 UDP address"
+
+udp6_addr:
+  other: "Must be a valid IPv6 UDP address"
+
+udp_addr:
+  other: "Must be a valid UDP address"
+
+unix_addr:
+  other: "Must be a valid Unix address"
+
+uds_exists:
+  other: "Unix domain socket must exist"
+
+uri:
+  other: "Must be a valid URI"
+
+http_url:
+  other: "Must be a valid HTTP or HTTPS URL"
+
+https_url:
+  other: "Must be a valid HTTPS URL"
+
+url_encoded:
+  other: "Must be URL encoded"
+
+urn_rfc2141:
+  other: "Must be a valid RFC 2141 URN"
+
+# Field validators
+fieldcontains:
+  other: "Must contain the value of {{.Arg1}}"
+
+fieldexcludes:
+  other: "Must not contain the value of {{.Arg1}}"
+
+# Compare validators
+eq:
+  other: "Must be equal to {{.Arg1}}"
+
+eq_ignore_case:
+  other: "Must be equal to {{.Arg1}} (case insensitive)"
+
+gt:
+  other: "Must be greater than {{.Arg1}}"
+
+gte:
+  other: "Must be greater than or equal to {{.Arg1}}"
+
+lt:
+  other: "Must be less than {{.Arg1}}"
+
+lte:
+  other: "Must be less than or equal to {{.Arg1}}"
+
+ne:
+  other: "Must not be equal to {{.Arg1}}"
+
+ne_ignore_case:
+  other: "Must not be equal to {{.Arg1}} (case insensitive)"

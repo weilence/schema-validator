@@ -17,6 +17,8 @@ func RegisterDefault(r *Registry) {
 	registerFormat(r)
 	registerNetwork(r)
 	registerOther(r)
+	registerString(r)
+	registerCompare(r)
 }
 
 type compareType int
@@ -119,12 +121,12 @@ func compareValue(ct compareType, currentValue, otherValue *data.Value) (bool, e
 				return false, err
 			}
 
-			b = len(bStr)
+			return compareFn(ct, a, bStr), nil
 		}
 
 		return compareFn(ct, len(a), b), nil
 	default:
-		if currentValue.IsSliceOrArray()  {
+		if currentValue.IsSliceOrArray() {
 			b := cast.ToInt(otherValue.Raw())
 			return compareFn(ct, currentValue.Len(), b), nil
 		}

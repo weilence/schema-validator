@@ -134,6 +134,15 @@ func (r *Registry) Register(code string, fn any) {
 	}
 }
 
+func (r *Registry) Alias(oldName, newName string) {
+	factory, ok := r.validators[oldName]
+	if !ok {
+		panic(fmt.Sprintf("validator '%s' not found in registry", oldName))
+	}
+
+	r.validators[newName] = factory
+}
+
 // NewValidator gets a field validator by name
 // params is a slice of parameter strings
 func (r *Registry) NewValidator(name string, params ...any) schema.Validator {

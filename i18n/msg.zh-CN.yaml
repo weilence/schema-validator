@@ -1,0 +1,497 @@
+# 中文验证消息
+# Path: 被验证的字段路径
+# Arg1, Arg2, ...: 验证器的位置参数
+
+required:
+  other: "该字段为必填项"
+
+min:
+  other: "最小值为 {{.Arg1}}"
+
+max:
+  other: "最大值为 {{.Arg1}}"
+
+email:
+  other: "必须是有效的邮箱地址"
+
+pattern:
+  other: "格式不正确"
+
+oneof:
+  other: "必须是以下值之一: {{.Arg1}}"
+
+eqfield:
+  other: "必须等于 {{.Arg1}}"
+
+nefield:
+  other: "不能等于 {{.Arg1}}"
+
+gtfield:
+  other: "必须大于 {{.Arg1}}"
+
+ltfield:
+  other: "必须小于 {{.Arg1}}"
+
+gtefield:
+  other: "必须大于或等于 {{.Arg1}}"
+
+ltefield:
+  other: "必须小于或等于 {{.Arg1}}"
+
+required_if:
+  other: "当 {{.Arg1}} 为 {{.Arg2}} 时，该字段为必填项"
+
+ip:
+  other: "必须是有效的 IP 地址"
+
+port:
+  other: "必须是有效的端口号 (1-65535)"
+
+domain:
+  other: "必须是有效的域名"
+
+url:
+  other: "必须是有效的 URL"
+
+# 其他验证器
+
+# 其他验证器
+dir:
+  other: "必须是有效的目录"
+
+dirpath:
+  other: "必须是有效的目录路径"
+
+file:
+  other: "必须是有效的文件"
+
+filepath:
+  other: "必须是有效的文件路径"
+
+image:
+  other: "必须是有效的图片文件"
+
+isdefault:
+  other: "必须是默认值"
+
+len:
+  other: "长度必须为 {{.Arg1}} 个字符"
+
+required_unless:
+  other: "除非 {{.Arg1}} 为 {{.Arg2}}，否则该字段为必填项"
+
+required_with:
+  other: "当 {{.Arg1}} 存在时，该字段为必填项"
+
+required_with_all:
+  other: "当所有 {{.Arg1}} 都存在时，该字段为必填项"
+
+required_without:
+  other: "当 {{.Arg1}} 不存在时，该字段为必填项"
+
+required_without_all:
+  other: "当所有 {{.Arg1}} 都不存在时，该字段为必填项"
+
+excluded_if:
+  other: "当 {{.Arg1}} 为 {{.Arg2}} 时，该字段不能存在"
+
+excluded_unless:
+  other: "除非 {{.Arg1}} 为 {{.Arg2}}，否则该字段不能存在"
+
+excluded_with:
+  other: "当 {{.Arg1}} 存在时，该字段不能存在"
+
+excluded_with_all:
+  other: "当所有 {{.Arg1}} 都存在时，该字段不能存在"
+
+excluded_without:
+  other: "当 {{.Arg1}} 不存在时，该字段不能存在"
+
+excluded_without_all:
+  other: "当所有 {{.Arg1}} 都不存在时，该字段不能存在"
+
+unique:
+  other: "必须包含唯一值"
+
+omitempty:
+  other: "该字段为可选"
+
+# 字符串验证器
+alpha:
+  other: "只能包含字母"
+
+alphaspace:
+  other: "只能包含字母和空格"
+
+alphanum:
+  other: "只能包含字母和数字"
+
+alphanumspace:
+  other: "只能包含字母、数字和空格"
+
+alphanumunicode:
+  other: "只能包含 Unicode 字母和数字"
+
+alphaunicode:
+  other: "只能包含 Unicode 字母"
+
+ascii:
+  other: "只能包含 ASCII 字符"
+
+boolean:
+  other: "必须是有效的布尔值"
+
+contains:
+  other: "必须包含 '{{.Arg1}}'"
+
+containsany:
+  other: "必须至少包含 '{{.Arg1}}' 中的一个字符"
+
+containsrune:
+  other: "必须包含字符 '{{.Arg1}}'"
+
+endsnotwith:
+  other: "不能以 '{{.Arg1}}' 结尾"
+
+endswith:
+  other: "必须以 '{{.Arg1}}' 结尾"
+
+excludes:
+  other: "不能包含 '{{.Arg1}}'"
+
+excludesall:
+  other: "不能包含 '{{.Arg1}}' 中的任何字符"
+
+excludesrune:
+  other: "不能包含字符 '{{.Arg1}}'"
+
+lowercase:
+  other: "必须是小写"
+
+multibyte:
+  other: "必须包含多字节字符"
+
+number:
+  other: "只能包含数字"
+
+numeric:
+  other: "必须是有效的数字"
+
+printascii:
+  other: "只能包含可打印的 ASCII 字符"
+
+startsnotwith:
+  other: "不能以 '{{.Arg1}}' 开头"
+
+startswith:
+  other: "必须以 '{{.Arg1}}' 开头"
+
+uppercase:
+  other: "必须是大写"
+
+# 格式验证器
+base64:
+  other: "必须是有效的 base64 字符串"
+
+base64url:
+  other: "必须是有效的 base64url 字符串"
+
+base64rawurl:
+  other: "必须是有效的 base64rawurl 字符串"
+
+bic_iso_9362_2014:
+  other: "必须是有效的 BIC (ISO 9362:2014)"
+
+bic:
+  other: "必须是有效的 BIC"
+
+bcp47_language_tag:
+  other: "必须是有效的 BCP47 语言标签"
+
+btc_addr:
+  other: "必须是有效的比特币地址"
+
+btc_addr_bech32:
+  other: "必须是有效的比特币 Bech32 地址"
+
+credit_card:
+  other: "必须是有效的信用卡号"
+
+mongodb:
+  other: "必须是有效的 MongoDB ObjectID"
+
+mongodb_connection_string:
+  other: "必须是有效的 MongoDB 连接字符串"
+
+cron:
+  other: "必须是有效的 cron 表达式"
+
+spicedb:
+  other: "必须是有效的 SpiceDB 资源"
+
+datetime:
+  other: "必须是有效的日期和时间"
+
+e164:
+  other: "必须是有效的 E164 电话号码"
+
+ein:
+  other: "必须是有效的 EIN"
+
+eth_addr:
+  other: "必须是有效的以太坊地址"
+
+hexadecimal:
+  other: "必须是有效的十六进制字符串"
+
+hexcolor:
+  other: "必须是有效的十六进制颜色"
+
+hsl:
+  other: "必须是有效的 HSL 颜色"
+
+hsla:
+  other: "必须是有效的 HSLA 颜色"
+
+html:
+  other: "必须包含 HTML"
+
+html_encoded:
+  other: "必须是 HTML 编码"
+
+isbn:
+  other: "必须是有效的 ISBN"
+
+isbn10:
+  other: "必须是有效的 ISBN-10"
+
+isbn13:
+  other: "必须是有效的 ISBN-13"
+
+issn:
+  other: "必须是有效的 ISSN"
+
+iso3166_1_alpha2:
+  other: "必须是有效的 ISO 3166-1 alpha-2 国家代码"
+
+iso3166_1_alpha3:
+  other: "必须是有效的 ISO 3166-1 alpha-3 国家代码"
+
+iso3166_1_alpha_numeric:
+  other: "必须是有效的 ISO 3166-1 数字国家代码"
+
+iso3166_2:
+  other: "必须是有效的 ISO 3166-2 细分代码"
+
+iso4217:
+  other: "必须是有效的 ISO 4217 货币代码"
+
+json:
+  other: "必须是有效的 JSON"
+
+jwt:
+  other: "必须是有效的 JWT"
+
+latitude:
+  other: "必须是有效的纬度 (-90 到 90)"
+
+longitude:
+  other: "必须是有效的经度 (-180 到 180)"
+
+luhn_checksum:
+  other: "必须通过 Luhn 校验和验证"
+
+postcode_iso3166_alpha2:
+  other: "必须是指定国家的有效邮政编码"
+
+postcode_iso3166_alpha2_field:
+  other: "必须是指定字段中国家的有效邮政编码"
+
+rgb:
+  other: "必须是有效的 RGB 颜色"
+
+rgba:
+  other: "必须是有效的 RGBA 颜色"
+
+ssn:
+  other: "必须是有效的 SSN"
+
+timezone:
+  other: "必须是有效的时区"
+
+uuid:
+  other: "必须是有效的 UUID"
+
+uuid3:
+  other: "必须是有效的 UUID v3"
+
+uuid3_rfc4122:
+  other: "必须是有效的 RFC 4122 UUID v3"
+
+uuid4:
+  other: "必须是有效的 UUID v4"
+
+uuid4_rfc4122:
+  other: "必须是有效的 RFC 4122 UUID v4"
+
+uuid5:
+  other: "必须是有效的 UUID v5"
+
+uuid5_rfc4122:
+  other: "必须是有效的 RFC 4122 UUID v5"
+
+uuid_rfc4122:
+  other: "必须是有效的 RFC 4122 UUID"
+
+md4:
+  other: "必须是有效的 MD4 哈希"
+
+md5:
+  other: "必须是有效的 MD5 哈希"
+
+sha256:
+  other: "必须是有效的 SHA256 哈希"
+
+sha384:
+  other: "必须是有效的 SHA384 哈希"
+
+sha512:
+  other: "必须是有效的 SHA512 哈希"
+
+ripemd128:
+  other: "必须是有效的 RIPEMD-128 哈希"
+
+ripemd160:
+  other: "必须是有效的 RIPEMD-160 哈希"
+
+tiger128:
+  other: "必须是有效的 Tiger-128 哈希"
+
+tiger160:
+  other: "必须是有效的 Tiger-160 哈希"
+
+tiger192:
+  other: "必须是有效的 Tiger-192 哈希"
+
+semver:
+  other: "必须是有效的语义版本"
+
+ulid:
+  other: "必须是有效的 ULID"
+
+cve:
+  other: "必须是有效的 CVE 标识符"
+
+# 网络验证器
+cidr:
+  other: "必须是有效的 CIDR 表示法"
+
+cidrv4:
+  other: "必须是有效的 IPv4 CIDR 表示法"
+
+cidrv6:
+  other: "必须是有效的 IPv6 CIDR 表示法"
+
+datauri:
+  other: "必须是有效的数据 URI"
+
+fqdn:
+  other: "必须是有效的 FQDN"
+
+hostname:
+  other: "必须是有效的主机名"
+
+hostname_rfc1123:
+  other: "必须是有效的 RFC 1123 主机名"
+
+hostname_port:
+  other: "必须是有效的 主机名:端口"
+
+ip4_addr:
+  other: "必须是有效的 IPv4 地址"
+
+ip6_addr:
+  other: "必须是有效的 IPv6 地址"
+
+ip_addr:
+  other: "必须是有效的 IP 地址"
+
+ipv4:
+  other: "必须是有效的 IPv4 地址"
+
+ipv6:
+  other: "必须是有效的 IPv6 地址"
+
+mac:
+  other: "必须是有效的 MAC 地址"
+
+tcp4_addr:
+  other: "必须是有效的 IPv4 TCP 地址"
+
+tcp6_addr:
+  other: "必须是有效的 IPv6 TCP 地址"
+
+tcp_addr:
+  other: "必须是有效的 TCP 地址"
+
+udp4_addr:
+  other: "必须是有效的 IPv4 UDP 地址"
+
+udp6_addr:
+  other: "必须是有效的 IPv6 UDP 地址"
+
+udp_addr:
+  other: "必须是有效的 UDP 地址"
+
+unix_addr:
+  other: "必须是有效的 Unix 地址"
+
+uds_exists:
+  other: "Unix 域套接字必须存在"
+
+uri:
+  other: "必须是有效的 URI"
+
+http_url:
+  other: "必须是有效的 HTTP 或 HTTPS URL"
+
+https_url:
+  other: "必须是有效的 HTTPS URL"
+
+url_encoded:
+  other: "必须是 URL 编码"
+
+urn_rfc2141:
+  other: "必须是有效的 RFC 2141 URN"
+
+# 字段验证器
+fieldcontains:
+  other: "必须包含 {{.Arg1}} 的值"
+
+fieldexcludes:
+  other: "不能包含 {{.Arg1}} 的值"
+
+# 比较验证器
+eq:
+  other: "必须等于 {{.Arg1}}"
+
+eq_ignore_case:
+  other: "必须等于 {{.Arg1}} (不区分大小写)"
+
+gt:
+  other: "必须大于 {{.Arg1}}"
+
+gte:
+  other: "必须大于或等于 {{.Arg1}}"
+
+lt:
+  other: "必须小于 {{.Arg1}}"
+
+lte:
+  other: "必须小于或等于 {{.Arg1}}"
+
+ne:
+  other: "不能等于 {{.Arg1}}"
+
+ne_ignore_case:
+  other: "不能等于 {{.Arg1}} (不区分大小写)"

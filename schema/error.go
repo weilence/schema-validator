@@ -72,6 +72,16 @@ func (r ValidationErrors) HasFieldError(field string) bool {
 	return false
 }
 
+func (r ValidationErrors) HasErrorCode(code string) bool {
+	for _, err := range r {
+		if err.Code == code {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (r ValidationErrors) Translate(translator func(err ValidationError) string) map[string][]string {
 	res := make(map[string][]string)
 	for _, err := range r {

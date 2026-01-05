@@ -3,6 +3,7 @@ package i18n
 import (
 	"embed"
 	"fmt"
+	"io/fs"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/weilence/schema-validator/schema"
@@ -10,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed messages/*.yaml
+//go:embed msg.*.yaml
 var messageFiles embed.FS
 
 // Translator translates validation errors to localized messages
@@ -24,18 +25,22 @@ type Translator struct {
 func NewTranslator(defaultLang language.Tag) (*Translator, error) {
 	bundle := i18n.NewBundle(defaultLang)
 	bundle.RegisterUnmarshalFunc("yaml", yaml.Unmarshal)
-	
-	// Load embedded message files
-	_, err := bundle.LoadMessageFileFS(messageFiles, "messages/active.en.yaml")
-	if err != nil {
-		return nil, fmt.Errorf("failed to load message file: %w", err)
-	}
 
-	_, err = bundle.LoadMessageFileFS(messageFiles, "messages/active.zh-CN.yaml")
-	if err != nil {
-		return nil, fmt.Errorf("failed to load message file: %w", err)
-	}
-	
+	// Load embedded message files
+	fs.WalkDir(messageFiles, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		_, err = bundle.LoadMessageFileFS(messageFiles, path)
+		if err != nil {
+			return fmt.Errorf("failed to load message file %s: %w", path, err)
+		}
+		return nil
+	})
+
 	return &Translator{
 		bundle:     bundle,
 		localizers: make(map[string]*i18n.Localizer),

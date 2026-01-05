@@ -1,6 +1,8 @@
 package validators
 
 import (
+	"strings"
+
 	"github.com/weilence/schema-validator/schema"
 )
 
@@ -32,4 +34,30 @@ func registerField(r *Registry) {
 	r.Register("ltfield", compareFieldValidator(LessThan))
 	r.Register("gtefield", compareFieldValidator(GreaterThanOrEqual))
 	r.Register("ltefield", compareFieldValidator(LessThanOrEqual))
+
+	r.Register("fieldcontains", func(ctx *schema.Context, fieldName string) error {
+		currentStr := ctx.Value().String()
+		otherValue, err := ctx.Parent().GetValue(fieldName)
+		if err != nil {
+			return err
+		}
+		otherStr := otherValue.String()
+		if strings.Contains(currentStr, otherStr) {
+			return nil
+		}
+		return schema.ErrCheckFailed
+	})
+
+	r.Register("fieldexcludes", func(ctx *schema.Context, fieldName string) error {
+		currentStr := ctx.Value().String()
+		otherValue, err := ctx.Parent().GetValue(fieldName)
+		if err != nil {
+			return err
+		}
+		otherStr := otherValue.String()
+		if !strings.Contains(currentStr, otherStr) {
+			return nil
+		}
+		return schema.ErrCheckFailed
+	})
 }
