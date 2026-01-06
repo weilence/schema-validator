@@ -118,7 +118,7 @@ func parseStructField(schema *schema.ObjectSchema, field reflect.StructField, cf
 		return nil
 	}
 
-	tags := parseTag(validateTag, cfg)
+	tags := ParseTag(validateTag, cfg.ruleSplitter, cfg.nameParamSeparator, cfg.paramsSeparator)
 	fieldSchema, err := parseField(field.Type, tags, cfg)
 	if err != nil {
 		return err
@@ -348,11 +348,11 @@ type TagRule struct {
 	Params []string
 }
 
-// parseTag parses a validation tag into rules
+// ParseTag parses a validation tag into rules
 // Example: "required|min=5,max=100" -> [{required, []}, {min, ["5"]}, {max, ["100"]}]
 // For multi-param: "between=10:100" -> [{between, ["10","100"]}]
 // The params are split here into a slice
-func parseTag(tag string, cfg *ParseConfig) []TagRule {
+func ParseTag(tag string, ruleSplitter, nameParamSeparator, paramsSeparator rune) []TagRule {
 	if tag == "" {
 		return nil
 	}
@@ -368,38 +368,38 @@ func parseTag(tag string, cfg *ParseConfig) []TagRule {
 	for i := 0; i < len(tag); i++ {
 		ch := tag[i]
 
-		if ch == byte(cfg.nameParamSeparator) {
+		if ch == byte(nameParamSeparator) {
 			inParam = true
 			currentRule += string(ch)
-		} else if ch == byte(cfg.ruleSplitter) {
+		} else if ch == byte(ruleSplitter) {
 			// Check if we're in a parameter value
 			// Look ahead to see if there's another '=' before the next ','
 			if inParam {
 				// Check if the next part looks like a new rule (contains '=') or is just a param
 				nextPart := ""
 				for j := i + 1; j < len(tag); j++ {
-					if tag[j] == byte(cfg.ruleSplitter) {
+					if tag[j] == byte(ruleSplitter) {
 						break
 					}
 					nextPart += string(tag[j])
 				}
 
 				// If nextPart doesn't contain '=' and doesn't look like a rule name, it's a parameter
-				if !slices.Contains([]byte(nextPart), byte(cfg.nameParamSeparator)) && !isValidatorName(nextPart) {
+				if !slices.Contains([]byte(nextPart), byte(nameParamSeparator)) && !isValidatorName(nextPart) {
 					// This comma is part of the parameter
 					currentRule += string(ch)
 				} else {
 					// This comma ends the current rule
 					inParam = false
 					if currentRule != "" {
-						rules = append(rules, parseRule(currentRule, cfg))
+						rules = append(rules, parseRule(currentRule, nameParamSeparator, paramsSeparator))
 						currentRule = ""
 					}
 				}
 			} else {
 				// Not in a parameter, this comma separates rules
 				if currentRule != "" {
-					rules = append(rules, parseRule(currentRule, cfg))
+					rules = append(rules, parseRule(currentRule, nameParamSeparator, paramsSeparator))
 					currentRule = ""
 				}
 			}
@@ -410,23 +410,23 @@ func parseTag(tag string, cfg *ParseConfig) []TagRule {
 
 	// Don't forget the last rule
 	if currentRule != "" {
-		rules = append(rules, parseRule(currentRule, cfg))
+		rules = append(rules, parseRule(currentRule, nameParamSeparator, paramsSeparator))
 	}
 
 	return rules
 }
 
 // parseRule parses a single rule string like "min=5" or "required"
-func parseRule(ruleStr string, cfg *ParseConfig) TagRule {
+func parseRule(ruleStr string, nameParamSeparator, paramsSeparator rune) TagRule {
 	ruleStr = strings.TrimSpace(ruleStr)
 
-	if before, after, ok := strings.Cut(ruleStr, string(cfg.nameParamSeparator)); ok {
+	if before, after, ok := strings.Cut(ruleStr, string(nameParamSeparator)); ok {
 		name := strings.TrimSpace(before)
 		raw := strings.TrimSpace(after)
 		// split params by paramsSeparator into slice
 		parts := []string{}
 		if raw != "" {
-			for _, p := range strings.Split(raw, string(cfg.paramsSeparator)) {
+			for _, p := range strings.Split(raw, string(paramsSeparator)) {
 				tp := strings.TrimSpace(p)
 				if tp != "" {
 					parts = append(parts, tp)
