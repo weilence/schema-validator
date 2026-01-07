@@ -51,7 +51,9 @@ func TestOtherValidators(t *testing.T) {
 		{"oneof invalid", "oneof", "d", []any{[]string{"a", "b", "c"}}, true},
 		// required
 		{"required valid", "required", "value", nil, false},
+		{"required valid 2", "required", ptr(0), nil, false},
 		{"required invalid", "required", "", nil, true},
+		{"required invalid 2", "required", 0, nil, true},
 		// unique (placeholder)
 		{"unique valid", "unique", "value", nil, false},
 		{"unique invalid", "unique", "value", nil, false}, // always pass for now
@@ -67,4 +69,8 @@ func TestOtherValidators(t *testing.T) {
 			assert.Equal(t, ctx.Errors().HasErrorCode(tt.ruleName), tt.wantErr)
 		})
 	}
+}
+
+func ptr[T any](v T) *T {
+	return &v
 }
