@@ -37,6 +37,9 @@ func (o *ObjectSchema) Validate(ctx *Context) error {
 		if oa.Kind() == reflect.Invalid {
 			return nil
 		}
+		if oa.Kind() == reflect.Ptr && oa.IsNilOrZero() {
+			return nil
+		}
 
 		return fmt.Errorf("expected object accessor, got primitive value")
 	default:
@@ -64,7 +67,6 @@ func (o *ObjectSchema) Validate(ctx *Context) error {
 			return fmt.Errorf("error accessing field %s: %w", fieldName, err)
 		}
 
-		// 创建子 context - 自动父级追踪和 schema 传递
 		fieldCtx := ctx.WithChild(name, fieldSchema, fieldData)
 
 		if err := fieldSchema.Validate(fieldCtx); err != nil {
