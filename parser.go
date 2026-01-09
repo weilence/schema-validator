@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/weilence/schema-validator/rule"
 	"github.com/weilence/schema-validator/schema"
 	"github.com/weilence/schema-validator/tag"
-	"github.com/weilence/schema-validator/rule"
 )
 
 type ParseConfig struct {
@@ -39,12 +39,6 @@ func WithRegistry(registry *rule.Registry) ParseOption {
 func WithTagParser(parser *tag.Parser) ParseOption {
 	return func(cfg *ParseConfig) {
 		cfg.TagParser = parser
-	}
-}
-
-func WithTagConfig(tagCfg tag.Config) ParseOption {
-	return func(cfg *ParseConfig) {
-		cfg.TagParser = tag.NewParser(tagCfg)
 	}
 }
 
