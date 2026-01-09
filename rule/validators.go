@@ -1,4 +1,4 @@
-package validators
+package rule
 
 import (
 	"cmp"

@@ -14,6 +14,14 @@ func NewArrayAccessor(v reflect.Value) *ArrayAccessor {
 	return &ArrayAccessor{value: v}
 }
 
+func (s *ArrayAccessor) deref() reflect.Value {
+	v := s.value
+	for v.Kind() == reflect.Pointer {
+		v = v.Elem()
+	}
+	return v
+}
+
 func (s *ArrayAccessor) GetField(name string) (Accessor, error) {
 	var idx int
 	n, err := fmt.Sscanf(name, "[%d]", &idx)
@@ -35,7 +43,7 @@ func (s *ArrayAccessor) Raw() any {
 
 func (s *ArrayAccessor) GetValue(path string) (*Value, error) {
 	if path == "" {
-		return &Value{rval: s.value}, nil
+		return NewValueAccessor(s.value), nil
 	}
 
 	part, nextPath := cutPath(path)
@@ -47,25 +55,24 @@ func (s *ArrayAccessor) GetValue(path string) (*Value, error) {
 	return elemAcc.GetValue(nextPath)
 }
 
-// GetIndex returns element at index
 func (s *ArrayAccessor) GetIndex(idx int) (Accessor, error) {
-	if idx < 0 || idx >= s.value.Len() {
+	v := s.deref()
+	if idx < 0 || idx >= v.Len() {
 		return nil, fmt.Errorf("index %d out of bounds", idx)
 	}
 
-	elem := s.value.Index(idx)
+	elem := v.Index(idx)
 	return NewAccessor(elem), nil
 }
 
-// Len returns array length
 func (s *ArrayAccessor) Len() int {
-	return s.value.Len()
+	return s.deref().Len()
 }
 
-// Iterate calls fn for each element
 func (s *ArrayAccessor) Iterate(fn func(idx int, elem Accessor) error) error {
-	for i := 0; i < s.value.Len(); i++ {
-		elem := s.value.Index(i)
+	v := s.deref()
+	for i := 0; i < v.Len(); i++ {
+		elem := v.Index(i)
 		accessor := NewAccessor(elem)
 		if err := fn(i, accessor); err != nil {
 			return err

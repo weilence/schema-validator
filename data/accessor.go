@@ -31,20 +31,25 @@ func NewAccessor(rv reflect.Value) Accessor {
 		rv = rv.Elem()
 	}
 
-	oldRv := rv
-	if rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
+	originalRv := rv
+
+	derefRv := rv
+	for derefRv.Kind() == reflect.Pointer {
+		if derefRv.IsNil() {
+			return NewValueAccessor(originalRv)
+		}
+		derefRv = derefRv.Elem()
 	}
 
-	switch rv.Kind() {
+	switch derefRv.Kind() {
 	case reflect.Slice, reflect.Array:
-		return NewArrayAccessor(rv)
+		return NewArrayAccessor(originalRv)
 	case reflect.Map:
-		return NewMapAccessor(rv)
-	case reflect.Struct, reflect.Pointer:
-		return NewStructAccessor(rv)
+		return NewMapAccessor(originalRv)
+	case reflect.Struct:
+		return NewStructAccessor(originalRv)
 	default:
-		return &Value{rval: oldRv}
+		return NewValueAccessor(originalRv)
 	}
 }
 

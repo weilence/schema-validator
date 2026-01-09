@@ -1,44 +1,44 @@
-package builder
+package validator
 
 import (
 	"github.com/weilence/schema-validator/schema"
-	"github.com/weilence/schema-validator/validators"
+	"github.com/weilence/schema-validator/rule"
 )
 
 // SchemaBuilder provides a unified fluent API for building different schema types
 type SchemaBuilder struct {
 	schema   schema.Schema
-	registry *validators.Registry
+	registry *rule.Registry
 }
 
 // Field creates a new field schema builder
 func Field() *SchemaBuilder {
-	return &SchemaBuilder{schema: schema.NewField(), registry: validators.DefaultRegistry()}
+	return &SchemaBuilder{schema: schema.NewField(), registry: rule.DefaultRegistry()}
 }
 
 // Array creates a new array schema builder
 func Array(elementSchema schema.Schema) *SchemaBuilder {
-	return &SchemaBuilder{schema: schema.NewArray(elementSchema), registry: validators.DefaultRegistry()}
+	return &SchemaBuilder{schema: schema.NewArray(elementSchema), registry: rule.DefaultRegistry()}
 }
 
 // Object creates a new object schema builder
 func Object() *SchemaBuilder {
-	return &SchemaBuilder{schema: schema.NewObject(), registry: validators.DefaultRegistry()}
+	return &SchemaBuilder{schema: schema.NewObject(), registry: rule.DefaultRegistry()}
 }
 
-// FieldWithRegistry creates a new field schema builder with a custom registry
-func (b *SchemaBuilder) Registry(r *validators.Registry) *SchemaBuilder {
+// Registry sets a custom registry for the builder
+func (b *SchemaBuilder) Registry(r *rule.Registry) *SchemaBuilder {
 	b.registry = r
 	return b
 }
 
-// Required marks the field as required (no-op for non-field builders)
+// Required marks the field as required
 func (b *SchemaBuilder) Required() *SchemaBuilder {
 	b.AddValidator("required")
 	return b
 }
 
-// Optional marks the field as optional (no-op for non-field builders)
+// Optional marks the field as optional
 func (b *SchemaBuilder) Optional() *SchemaBuilder {
 	b.schema.RemoveValidator("required")
 	return b
@@ -51,15 +51,14 @@ func (b *SchemaBuilder) AddValidator(name string, params ...any) *SchemaBuilder 
 	return b
 }
 
-// Field adds a field to the underlying object schema (no-op for non-object builders)
-func (b *SchemaBuilder) Field(name string, fieldSchema schema.Schema) *SchemaBuilder {
+func (b *SchemaBuilder) WithField(name string, fieldSchema schema.Schema) *SchemaBuilder {
 	if os, ok := b.schema.(*schema.ObjectSchema); ok {
 		os.AddField(name, fieldSchema)
 	}
 	return b
 }
 
-// FieldName sets the mapping for an object field (no-op for non-object builders)
+// FieldName sets the mapping for an object field
 func (b *SchemaBuilder) FieldName(name string, fieldName string) *SchemaBuilder {
 	if os, ok := b.schema.(*schema.ObjectSchema); ok {
 		os.AddFieldName(name, fieldName)
@@ -67,7 +66,7 @@ func (b *SchemaBuilder) FieldName(name string, fieldName string) *SchemaBuilder 
 	return b
 }
 
-// Build returns the built schema as the Schema interface
+// Build returns the built schema
 func (b *SchemaBuilder) Build() schema.Schema {
 	return b.schema
 }

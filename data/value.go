@@ -11,9 +11,13 @@ type Value struct {
 	rval reflect.Value
 }
 
+func NewValueAccessor(rv reflect.Value) *Value {
+	return &Value{rval: rv}
+}
+
 func NewValue(v any) *Value {
 	rv := reflect.ValueOf(v)
-	return &Value{rval: rv}
+	return NewValueAccessor(rv)
 }
 
 func (p *Value) GetField(name string) (Accessor, error) {

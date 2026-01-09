@@ -1,4 +1,4 @@
-package builder
+package validator
 
 import (
 	"fmt"
@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/weilence/schema-validator/rule"
 	"github.com/weilence/schema-validator/schema"
 	"github.com/weilence/schema-validator/tag"
+	"github.com/weilence/schema-validator/rule"
 )
 
 type ParseConfig struct {
@@ -60,6 +60,7 @@ func WithValueTypes(types ...reflect.Type) ParseOption {
 	}
 }
 
+// Parse parses a struct type into an ObjectSchema using struct tags
 func Parse(rt reflect.Type, opts ...ParseOption) (*schema.ObjectSchema, error) {
 	cfg := defaultParseConfig()
 	for _, opt := range opts {

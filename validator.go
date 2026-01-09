@@ -3,7 +3,6 @@ package validator
 import (
 	"reflect"
 
-	"github.com/weilence/schema-validator/builder"
 	"github.com/weilence/schema-validator/data"
 	"github.com/weilence/schema-validator/schema"
 )
@@ -13,9 +12,8 @@ type Validator struct {
 	schema schema.Schema
 }
 
-// New creates a validator from struct tags
-func New(prototype any, opts ...builder.ParseOption) (*Validator, error) {
-	objSchema, err := builder.Parse(reflect.TypeOf(prototype), opts...)
+func New(prototype any, opts ...ParseOption) (*Validator, error) {
+	objSchema, err := Parse(reflect.TypeOf(prototype), opts...)
 	if err != nil {
 		return nil, err
 	}

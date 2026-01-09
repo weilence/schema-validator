@@ -13,13 +13,21 @@ func NewMapAccessor(v reflect.Value) *mapAccessor {
 	return &mapAccessor{value: v}
 }
 
+func (m *mapAccessor) deref() reflect.Value {
+	v := m.value
+	for v.Kind() == reflect.Pointer {
+		v = v.Elem()
+	}
+	return v
+}
+
 func (m *mapAccessor) Raw() any {
 	return m.value.Interface()
 }
 
 func (m *mapAccessor) GetValue(path string) (*Value, error) {
 	if path == "" {
-		return &Value{rval: m.value}, nil
+		return NewValueAccessor(m.value), nil
 	}
 
 	fieldName, nextPath := cutPath(path)
@@ -32,13 +40,11 @@ func (m *mapAccessor) GetValue(path string) (*Value, error) {
 	return fieldAcc.GetValue(nextPath)
 }
 
-// GetField returns field by name (map key)
 func (m *mapAccessor) GetField(name string) (Accessor, error) {
-	// Convert name to key value
+	v := m.deref()
 	keyVal := reflect.ValueOf(name)
 
-	// Get value from map
-	val := m.value.MapIndex(keyVal)
+	val := v.MapIndex(keyVal)
 	if !val.IsValid() {
 		return nil, fmt.Errorf("key %s not found in map", name)
 	}

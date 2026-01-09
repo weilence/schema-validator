@@ -12,11 +12,16 @@ type structAccessor struct {
 }
 
 func NewStructAccessor(v reflect.Value) *structAccessor {
+	derefV := v
+	for derefV.Kind() == reflect.Pointer {
+		derefV = derefV.Elem()
+	}
+
 	var embedValues []*structAccessor
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Type().Field(i)
+	for i := 0; i < derefV.NumField(); i++ {
+		field := derefV.Type().Field(i)
 		if field.Anonymous {
-			embedField := v.Field(i)
+			embedField := derefV.Field(i)
 			if embedField.Kind() == reflect.Pointer && !embedField.IsNil() {
 				embedField = embedField.Elem()
 			}
@@ -33,6 +38,14 @@ func NewStructAccessor(v reflect.Value) *structAccessor {
 	}
 }
 
+func (s *structAccessor) deref() reflect.Value {
+	v := s.value
+	for v.Kind() == reflect.Pointer {
+		v = v.Elem()
+	}
+	return v
+}
+
 func (s *structAccessor) Raw() any {
 	if s.value.CanInterface() {
 		return s.value.Interface()
@@ -44,7 +57,7 @@ func (s *structAccessor) Raw() any {
 // TODO: resolve conflict with embedded fields in same name
 func (s *structAccessor) GetValue(path string) (*Value, error) {
 	if path == "" {
-		return &Value{rval: s.value}, nil
+		return NewValueAccessor(s.value), nil
 	}
 
 	fieldName, nextPath := cutPath(path)
@@ -57,14 +70,13 @@ func (s *structAccessor) GetValue(path string) (*Value, error) {
 	return fieldAcc.GetValue(nextPath)
 }
 
-// GetField returns field by name (supports embedded fields)
 func (s *structAccessor) GetField(name string) (Accessor, error) {
-	v := s.value.FieldByName(name)
-	if v != (reflect.Value{}) {
-		return NewAccessor(v), nil
+	v := s.deref()
+	field := v.FieldByName(name)
+	if field != (reflect.Value{}) {
+		return NewAccessor(field), nil
 	}
 
-	// Check embedded structs
 	for _, embed := range s.embedValues {
 		if fieldAcc, err := embed.GetField(name); err == nil {
 			return fieldAcc, nil
