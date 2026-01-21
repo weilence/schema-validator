@@ -71,7 +71,13 @@ func compareFn[T cmp.Ordered](t compareType, a, b T) bool {
 }
 
 func compareValue(ct compareType, currentValue, otherValue *data.Value) (bool, error) {
-	switch v := currentValue.Raw().(type) {
+	v := currentValue.Any()
+
+	if v == nil {
+		return true, nil
+	}
+
+	switch v := v.(type) {
 	case int, int8, int16, int32, int64:
 		a, err := cast.ToE[int64](v)
 		if err != nil {

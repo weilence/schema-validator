@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -53,6 +54,45 @@ func TestCompareValidators(t *testing.T) {
 			err := s.Validate(ctx)
 			assert.NoError(t, err)
 			assert.Equal(t, ctx.Errors().HasErrorCode(tt.ruleName), tt.wantErr)
+		})
+	}
+}
+
+// TestCompareValidatorsWithPointerTypes tests compare validators with pointer types
+func TestCompareValidatorsWithPointerTypes(t *testing.T) {
+	r := NewRegistry()
+	registerCompare(r)
+
+	tests := []struct {
+		name     string
+		ruleName string
+		value    any
+		params   []any
+		wantErr  bool
+	}{
+		// gt with *int
+		{"gt valid *int", "gt", ptr(10), []any{"5"}, false},
+		{"gt invalid *int", "gt", ptr(5), []any{"10"}, true},
+		{"gt nil *int", "gt", (*int)(nil), []any{"5"}, false},
+
+		// eq with *int
+		{"eq valid *int", "eq", ptr(10), []any{"10"}, false},
+		{"eq invalid *int", "eq", ptr(5), []any{"10"}, true},
+		{"eq nil *int", "eq", (*int)(nil), []any{"0"}, false},
+
+		// test float pointer
+		{"gt valid *float64", "gt", ptr(float64(10.5)), []any{"5.5"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := schema.NewObject().
+				AddField("test", schema.NewField().AddValidator(r.NewValidator(tt.ruleName, tt.params...)))
+			ctx := schema.NewContext(s, data.New(map[string]any{"test": tt.value}))
+			err := s.Validate(ctx)
+			assert.NoError(t, err)
+			assert.Equal(t, ctx.Errors().HasErrorCode(tt.ruleName), tt.wantErr,
+				fmt.Sprintf("test case '%s' failed: value=%v, params=%v", tt.name, tt.value, tt.params))
 		})
 	}
 }

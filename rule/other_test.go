@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -67,6 +68,76 @@ func TestOtherValidators(t *testing.T) {
 			err := s.Validate(ctx)
 			assert.NoError(t, err)
 			assert.Equal(t, ctx.Errors().HasErrorCode(tt.ruleName), tt.wantErr)
+		})
+	}
+}
+
+// TestMinValidatorWithPointerTypes tests min validator with pointer types
+func TestMinValidatorWithPointerTypes(t *testing.T) {
+	r := NewRegistry()
+	registerOther(r)
+
+	tests := []struct {
+		name     string
+		ruleName string
+		value    any
+		params   []any
+		wantErr  bool
+	}{
+		{"min valid *int", "min", ptr(10), []any{5}, false},
+		{"min invalid *int", "min", ptr(3), []any{5}, true},
+		{"min equal *int", "min", ptr(5), []any{5}, false},
+
+		{"min valid *float64", "min", ptr(float64(10.5)), []any{5}, false},
+		{"min invalid *float64", "min", ptr(float64(3.5)), []any{5}, true},
+
+		{"min nil *int", "min", (*int)(nil), []any{5}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := schema.NewObject().
+				AddField("test", schema.NewField().AddValidator(r.NewValidator(tt.ruleName, tt.params...)))
+			ctx := schema.NewContext(s, data.New(map[string]any{"test": tt.value}))
+			err := s.Validate(ctx)
+			assert.NoError(t, err)
+			assert.Equal(t, ctx.Errors().HasErrorCode(tt.ruleName), tt.wantErr,
+				fmt.Sprintf("test case '%s' failed: value=%v, params=%v", tt.name, tt.value, tt.params))
+		})
+	}
+}
+
+// TestMaxValidatorWithPointerTypes tests max validator with pointer types
+func TestMaxValidatorWithPointerTypes(t *testing.T) {
+	r := NewRegistry()
+	registerOther(r)
+
+	tests := []struct {
+		name     string
+		ruleName string
+		value    any
+		params   []any
+		wantErr  bool
+	}{
+		{"max valid *int", "max", ptr(5), []any{10}, false},
+		{"max invalid *int", "max", ptr(15), []any{10}, true},
+		{"max equal *int", "max", ptr(10), []any{10}, false},
+
+		{"max valid *float64", "max", ptr(float64(5.5)), []any{10}, false},
+		{"max invalid *float64", "max", ptr(float64(15.5)), []any{10}, true},
+
+		{"max nil *int", "max", (*int)(nil), []any{10}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := schema.NewObject().
+				AddField("test", schema.NewField().AddValidator(r.NewValidator(tt.ruleName, tt.params...)))
+			ctx := schema.NewContext(s, data.New(map[string]any{"test": tt.value}))
+			err := s.Validate(ctx)
+			assert.NoError(t, err)
+			assert.Equal(t, ctx.Errors().HasErrorCode(tt.ruleName), tt.wantErr,
+				fmt.Sprintf("test case '%s' failed: value=%v, params=%v", tt.name, tt.value, tt.params))
 		})
 	}
 }
