@@ -43,7 +43,7 @@ func Test_compareFieldValidator(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := schema.NewObject().
-				AddField("Field1", schema.NewField().AddValidator(r.NewValidator(tt.ruleName, "Field2"))).
+				AddField("Field1", schema.NewField().AddValidator(mustNewValidator(r, tt.ruleName, "Field2"))).
 				AddField("Field2", schema.NewField())
 			ctx := schema.NewContext(s, data.New(tt.value))
 			err := s.Validate(ctx)

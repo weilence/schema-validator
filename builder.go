@@ -46,7 +46,10 @@ func (b *SchemaBuilder) Optional() *SchemaBuilder {
 
 // AddValidator adds a custom validator to the underlying schema
 func (b *SchemaBuilder) AddValidator(name string, params ...any) *SchemaBuilder {
-	v := b.registry.NewValidator(name, params...)
+	v, err := b.registry.NewValidator(name, params...)
+	if err != nil {
+		panic(err)
+	}
 	b.schema.AddValidator(v)
 	return b
 }

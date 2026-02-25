@@ -158,7 +158,7 @@ func TestFormatValidators(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := schema.NewObject().
-				AddField("test", schema.NewField().AddValidator(r.NewValidator(tt.ruleName)))
+				AddField("test", schema.NewField().AddValidator(mustNewValidator(r, tt.ruleName)))
 			ctx := schema.NewContext(s, data.New(map[string]any{"test": tt.value}))
 			err := s.Validate(ctx)
 			assert.NoError(t, err)

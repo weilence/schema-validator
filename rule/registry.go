@@ -45,7 +45,12 @@ func (vf validatorFactory) Build(params []any) schema.Validator {
 	}
 }
 
-// Registry maps validator names to factory functions
+// Registry maps validator names to factory functions.
+//
+// Thread-safety: This type is NOT safe for concurrent use.
+// The Registry is expected to be configured during initialization
+// (via Register/Alias) and then used read-only (via NewValidator).
+// If you need concurrent registration, use external synchronization.
 type Registry struct {
 	validators map[string]validatorFactory
 }
@@ -58,17 +63,17 @@ func NewRegistry() *Registry {
 }
 
 // Register registers a field validator factory
-func (r *Registry) Register(code string, fn any) {
+func (r *Registry) Register(code string, fn any) error {
 	rv := reflect.ValueOf(fn)
 	rvType := rv.Type()
 	if rvType.Kind() != reflect.Func {
-		panic("validator factory must be a function")
+		return fmt.Errorf("validator factory must be a function")
 	}
 	if rvType.NumIn() < 1 || rvType.In(0) != reflect.TypeFor[*schema.Context]() {
-		panic("first parameter of validator factory must be *schema.Context")
+		return fmt.Errorf("first parameter of validator factory must be *schema.Context")
 	}
 	if rvType.NumOut() != 1 || rvType.Out(0) != reflect.TypeFor[error]() {
-		panic("validator factory must return a single error value")
+		return fmt.Errorf("validator factory must return a single error value")
 	}
 
 	rvParamTypes := make([]reflect.Type, 0)
@@ -132,35 +137,42 @@ func (r *Registry) Register(code string, fn any) {
 		paramTypes: rvParamTypes,
 		fn:         newFn2,
 	}
+
+	return nil
 }
 
-func (r *Registry) Alias(oldName, newName string) {
+func (r *Registry) Alias(oldName, newName string) error {
 	factory, ok := r.validators[oldName]
 	if !ok {
-		panic(fmt.Sprintf("validator '%s' not found in registry", oldName))
+		return fmt.Errorf("validator '%s' not found in registry", oldName)
 	}
 
 	r.validators[newName] = factory
+
+	return nil
 }
 
-// NewValidator gets a field validator by name
+// NewValidator gets a field validator by name, returns error if not found
 // params is a slice of parameter strings
-func (r *Registry) NewValidator(name string, params ...any) schema.Validator {
+func (r *Registry) NewValidator(name string, params ...any) (schema.Validator, error) {
 	factory, ok := r.validators[name]
+
 	if !ok {
-		panic(fmt.Sprintf("validator '%s' not found in registry", name))
+		return nil, fmt.Errorf("validator '%s' not found in registry", name)
 	}
 
-	return factory.Build(params)
+	return factory.Build(params), nil
 }
 
-func (r *Registry) GetValidatorParamTypes(name string) []reflect.Type {
+// GetValidatorParamTypes gets validator param types, returns error if not found
+func (r *Registry) GetValidatorParamTypes(name string) ([]reflect.Type, error) {
 	factory, ok := r.validators[name]
+
 	if !ok {
-		panic(fmt.Sprintf("validator '%s' not found in registry", name))
+		return nil, fmt.Errorf("validator '%s' not found in registry", name)
 	}
 
-	return factory.paramTypes
+	return factory.paramTypes, nil
 }
 
 // DefaultRegistry returns the default registry
@@ -170,10 +182,12 @@ func DefaultRegistry() *Registry {
 
 var defaultRegistry = NewRegistry()
 
-func Register(name string, fn any) {
-	defaultRegistry.Register(name, fn)
+// Register registers a validator to the default registry, returns error
+func Register(name string, fn any) error {
+	return defaultRegistry.Register(name, fn)
 }
 
-func NewValidator(name string, params ...any) schema.Validator {
+// NewValidator creates a validator from the default registry, returns error
+func NewValidator(name string, params ...any) (schema.Validator, error) {
 	return defaultRegistry.NewValidator(name, params...)
 }

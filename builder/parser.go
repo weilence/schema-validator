@@ -148,11 +148,16 @@ func parseField(fieldType reflect.Type, rules []tag.Rule, cfg *ParseConfig) (sch
 
 		arraySchema := schema.NewArray(elemSchema)
 		for _, rule := range arrayRules {
-			params := convertValidatorParams(rule.Name, rule.Params, cfg)
-			v := cfg.Registry.NewValidator(rule.Name, params...)
-			if v != nil {
-				arraySchema.AddValidator(v)
+			params, err := convertValidatorParams(rule.Name, rule.Params, cfg)
+			if err != nil {
+				return nil, err
 			}
+			v, err := cfg.Registry.NewValidator(rule.Name, params...)
+			if err != nil {
+				return nil, err
+			}
+
+			arraySchema.AddValidator(v)
 		}
 
 		return arraySchema, nil
@@ -168,22 +173,30 @@ func parseField(fieldType reflect.Type, rules []tag.Rule, cfg *ParseConfig) (sch
 
 	fieldSchema := schema.NewField()
 	for _, rule := range rules {
-		params := convertValidatorParams(rule.Name, rule.Params, cfg)
-		v := cfg.Registry.NewValidator(rule.Name, params...)
-		if v != nil {
-			fieldSchema.AddValidator(v)
+		params, err := convertValidatorParams(rule.Name, rule.Params, cfg)
+		if err != nil {
+			return nil, err
 		}
+		v, err := cfg.Registry.NewValidator(rule.Name, params...)
+		if err != nil {
+			return nil, err
+		}
+
+		fieldSchema.AddValidator(v)
 	}
 
 	return fieldSchema, nil
 }
 
-func convertValidatorParams(name string, paramStrs []string, cfg *ParseConfig) []any {
-	paramTypes := cfg.Registry.GetValidatorParamTypes(name)
+func convertValidatorParams(name string, paramStrs []string, cfg *ParseConfig) ([]any, error) {
+	paramTypes, err := cfg.Registry.GetValidatorParamTypes(name)
+	if err != nil {
+		return nil, err
+	}
 
 	paramTypesLen := len(paramTypes)
 	if paramTypesLen == 0 && len(paramStrs) != 0 {
-		panic(fmt.Sprintf("%s does not take any parameters", name))
+		return nil, fmt.Errorf("%s does not take any parameters", name)
 	}
 
 	if paramTypesLen == 1 {
@@ -194,121 +207,135 @@ func convertValidatorParams(name string, paramStrs []string, cfg *ParseConfig) [
 			res := reflect.ArrayOf(paramType.Len(), paramType.Elem())
 			rv := reflect.New(res).Elem()
 			for i, paramStr := range paramStrs {
-				elem := parseValidatorParam(paramType.Elem(), paramStr)
+				elem, err := parseValidatorParam(paramType.Elem(), paramStr)
+				if err != nil {
+					return nil, err
+				}
 				rv.Index(i).Set(reflect.ValueOf(elem))
 			}
-			return []any{rv.Interface()}
+			return []any{rv.Interface()}, nil
 		case reflect.Slice:
 			res := reflect.MakeSlice(paramType, 0, 0)
 			for _, paramStr := range paramStrs {
-				elem := parseValidatorParam(paramType.Elem(), paramStr)
+				elem, err := parseValidatorParam(paramType.Elem(), paramStr)
+				if err != nil {
+					return nil, err
+				}
 				res = reflect.Append(res, reflect.ValueOf(elem))
 			}
-			return []any{res.Interface()}
+			return []any{res.Interface()}, nil
 		default:
 			if len(paramStrs) != 1 {
-				panic(fmt.Sprintf("%s expected 1 parameter, got %d", name, len(paramStrs)))
+				return nil, fmt.Errorf("%s expected 1 parameter, got %d", name, len(paramStrs))
 			}
-			return []any{parseValidatorParam(paramType, paramStrs[0])}
+			param, err := parseValidatorParam(paramType, paramStrs[0])
+			if err != nil {
+				return nil, err
+			}
+			return []any{param}, nil
 		}
 	}
 
 	if len(paramStrs) != paramTypesLen {
-		panic(fmt.Sprintf("%s expected %d parameters, got %d", name, paramTypesLen, len(paramStrs)))
+		return nil, fmt.Errorf("%s expected %d parameters, got %d", name, paramTypesLen, len(paramStrs))
 	}
 
 	params := make([]any, paramTypesLen)
 	for i, paramType := range paramTypes {
-		params[i] = parseValidatorParam(paramType, paramStrs[i])
+		param, err := parseValidatorParam(paramType, paramStrs[i])
+		if err != nil {
+			return nil, err
+		}
+		params[i] = param
 	}
 
-	return params
+	return params, nil
 }
 
-func parseValidatorParam(paramType reflect.Type, paramValue string) any {
+func parseValidatorParam(paramType reflect.Type, paramValue string) (any, error) {
 	switch paramType.Kind() {
 	case reflect.Bool:
 		var v bool
 		if _, err := fmt.Sscanf(paramValue, "%t", &v); err != nil {
-			panic(fmt.Sprintf("invalid bool parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid bool parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Int:
 		var v int
 		if _, err := fmt.Sscanf(paramValue, "%d", &v); err != nil {
-			panic(fmt.Sprintf("invalid int parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid int parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Int8:
 		var v int8
 		if _, err := fmt.Sscanf(paramValue, "%d", &v); err != nil {
-			panic(fmt.Sprintf("invalid int8 parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid int8 parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Int16:
 		var v int16
 		if _, err := fmt.Sscanf(paramValue, "%d", &v); err != nil {
-			panic(fmt.Sprintf("invalid int16 parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid int16 parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Int32:
 		var v int32
 		if _, err := fmt.Sscanf(paramValue, "%d", &v); err != nil {
-			panic(fmt.Sprintf("invalid int32 parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid int32 parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Int64:
 		var v int64
 		if _, err := fmt.Sscanf(paramValue, "%d", &v); err != nil {
-			panic(fmt.Sprintf("invalid int64 parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid int64 parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Uint:
 		var v uint
 		if _, err := fmt.Sscanf(paramValue, "%d", &v); err != nil {
-			panic(fmt.Sprintf("invalid uint parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid uint parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Uint8:
 		var v uint8
 		if _, err := fmt.Sscanf(paramValue, "%d", &v); err != nil {
-			panic(fmt.Sprintf("invalid uint8 parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid uint8 parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Uint16:
 		var v uint16
 		if _, err := fmt.Sscanf(paramValue, "%d", &v); err != nil {
-			panic(fmt.Sprintf("invalid uint16 parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid uint16 parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Uint32:
 		var v uint32
 		if _, err := fmt.Sscanf(paramValue, "%d", &v); err != nil {
-			panic(fmt.Sprintf("invalid uint32 parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid uint32 parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Uint64:
 		var v uint64
 		if _, err := fmt.Sscanf(paramValue, "%d", &v); err != nil {
-			panic(fmt.Sprintf("invalid uint64 parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid uint64 parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Float32:
 		var v float32
 		if _, err := fmt.Sscanf(paramValue, "%f", &v); err != nil {
-			panic(fmt.Sprintf("invalid float32 parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid float32 parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.Float64:
 		var v float64
 		if _, err := fmt.Sscanf(paramValue, "%f", &v); err != nil {
-			panic(fmt.Sprintf("invalid float64 parameter: %s", paramValue))
+			return nil, fmt.Errorf("invalid float64 parameter: %s", paramValue)
 		}
-		return v
+		return v, nil
 	case reflect.String, reflect.Interface:
-		return paramValue
+		return paramValue, nil
 	default:
-		panic(fmt.Sprintf("unsupported parameter type: %s", paramType.Kind()))
+		return nil, fmt.Errorf("unsupported parameter type: %s", paramType.Kind())
 	}
 }
 

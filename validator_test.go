@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/weilence/schema-validator/schema"
 	"github.com/weilence/schema-validator/rule"
+	"github.com/weilence/schema-validator/schema"
 )
 
 // Test 1: Tag-based validation
@@ -274,9 +274,11 @@ func TestArrayValidation(t *testing.T) {
 // Test 5: Cross-field validation with code
 func TestCrossFieldValidationWithCode(t *testing.T) {
 	// register passwordMatchValidator into registry and add by name
-	rule.Register("password", func(ctx *schema.Context, params []any) error {
+	if err := rule.Register("password", func(ctx *schema.Context, params []any) error {
 		return nil
-	})
+	}); err != nil {
+		t.Fatalf("Failed to register validator: %v", err)
+	}
 
 	userSchema := Object().
 		WithField("password", Field().AddValidator("required").AddValidator("min", 8).Build()).
@@ -508,4 +510,197 @@ func TestSchemaModifierNestedAccess(t *testing.T) {
 	if err == nil {
 		t.Error("Expected validation to fail for US zip code with length < 5")
 	}
+}
+
+// BenchmarkSimpleValidation benchmarks a simple validation scenario
+func BenchmarkSimpleValidation(b *testing.B) {
+	type User struct {
+		Name  string `validate:"required|alpha"`
+		Email string `validate:"required|email"`
+		Age   int    `validate:"required|min=18|max=100"`
+	}
+
+	v, err := New(User{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	user := User{
+		Name:  "JohnDoe",
+		Email: "john@example.com",
+		Age:   30,
+	}
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		err := v.Validate(user)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkNestedValidation benchmarks nested object validation
+func BenchmarkNestedValidation(b *testing.B) {
+	type Address struct {
+		Street string `validate:"required"`
+		City   string `validate:"required"`
+		ZIP    string `validate:"required|len=5"`
+	}
+
+	type User struct {
+		Name    string  `validate:"required"`
+		Email   string  `validate:"required|email"`
+		Address Address `validate:"required"`
+	}
+
+	v, err := New(User{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	user := User{
+		Name:  "John Doe",
+		Email: "john@example.com",
+		Address: Address{
+			Street: "123 Main St",
+			City:   "Springfield",
+			ZIP:    "12345",
+		},
+	}
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		err := v.Validate(user)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkArrayValidation benchmarks array/slice validation
+func BenchmarkArrayValidation(b *testing.B) {
+	type User struct {
+		Tags []string `validate:"required|min=1|max=5|dive"`
+	}
+
+	v, err := New(User{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	user := User{
+		Tags: []string{"go", "validator", "benchmark"},
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		err := v.Validate(user)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkComplexValidation benchmarks a complex validation scenario
+func BenchmarkComplexValidation(b *testing.B) {
+	type Profile struct {
+		Username string `validate:"required|alphanum|min=3|max=20"`
+		Bio      string `validate:"omitempty|max=500"`
+		Website  string `validate:"omitempty|url"`
+	}
+
+	type User struct {
+		Email    string   `validate:"required|email"`
+		Password string   `validate:"required|min=8"`
+		Age      int      `validate:"required|min=13|max=120"`
+		Tags     []string `validate:"required|min=1|max=10|dive"`
+		Profile  Profile  `validate:"required"`
+	}
+
+	v, err := New(User{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	user := User{
+		Email:    "user@example.com",
+		Password: "securePassword123",
+		Age:      25,
+		Tags:     []string{"developer", "golang", "testing"},
+		Profile: Profile{
+			Username: "johndoe",
+			Bio:      "Software developer",
+			Website:  "https://example.com",
+		},
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		err := v.Validate(user)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkContextPool benchmarks the effect of context pooling
+func BenchmarkContextPool(b *testing.B) {
+	type User struct {
+		Name string `validate:"required"`
+	}
+
+	v, err := New(User{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	user := User{Name: "Test"}
+
+	b.ReportAllocs()
+
+	for b.Loop() {
+		err := v.Validate(user)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkParallelValidation tests concurrent validation performance
+func BenchmarkParallelValidation(b *testing.B) {
+	type User struct {
+		Name  string `validate:"required|alpha"`
+		Email string `validate:"required|email"`
+		Age   int    `validate:"required|min=18|max=100"`
+	}
+
+	v, err := New(User{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	user := User{
+		Name:  "JohnDoe",
+		Email: "john@example.com",
+		Age:   30,
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			err := v.Validate(user)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }

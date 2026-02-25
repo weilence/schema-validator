@@ -9,75 +9,29 @@ import (
 
 func registerString(r *Registry) {
 	// ------------------------ workaround from go-playground/validator ------------------------
-	r.Register("alpha", func(ctx *schema.Context) error {
-		str := ctx.Value().String()
-		for _, r := range str {
-			if !unicode.IsLetter(r) {
-				return schema.ErrCheckFailed
-			}
-		}
-		return nil
-	})
+	r.Register("alpha", stringValidator(unicode.IsLetter))
 
-	r.Register("alphaspace", func(ctx *schema.Context) error {
-		str := ctx.Value().String()
-		for _, r := range str {
-			if !unicode.IsLetter(r) && !unicode.IsSpace(r) {
-				return schema.ErrCheckFailed
-			}
-		}
-		return nil
-	})
+	r.Register("alphaspace", stringValidator(func(r rune) bool {
+		return unicode.IsLetter(r) || unicode.IsSpace(r)
+	}))
 
-	r.Register("alphanum", func(ctx *schema.Context) error {
-		str := ctx.Value().String()
-		for _, r := range str {
-			if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
-				return schema.ErrCheckFailed
-			}
-		}
-		return nil
-	})
+	r.Register("alphanum", stringValidator(func(r rune) bool {
+		return unicode.IsLetter(r) || unicode.IsDigit(r)
+	}))
 
-	r.Register("alphanumspace", func(ctx *schema.Context) error {
-		str := ctx.Value().String()
-		for _, r := range str {
-			if !unicode.IsLetter(r) && !unicode.IsDigit(r) && !unicode.IsSpace(r) {
-				return schema.ErrCheckFailed
-			}
-		}
-		return nil
-	})
+	r.Register("alphanumspace", stringValidator(func(r rune) bool {
+		return unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsSpace(r)
+	}))
 
-	r.Register("alphanumunicode", func(ctx *schema.Context) error {
-		str := ctx.Value().String()
-		for _, r := range str {
-			if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
-				return schema.ErrCheckFailed
-			}
-		}
-		return nil
-	})
+	r.Register("alphanumunicode", stringValidator(func(r rune) bool {
+		return unicode.IsLetter(r) || unicode.IsDigit(r)
+	}))
 
-	r.Register("alphaunicode", func(ctx *schema.Context) error {
-		str := ctx.Value().String()
-		for _, r := range str {
-			if !unicode.IsLetter(r) {
-				return schema.ErrCheckFailed
-			}
-		}
-		return nil
-	})
+	r.Register("alphaunicode", stringValidator(unicode.IsLetter))
 
-	r.Register("ascii", func(ctx *schema.Context) error {
-		str := ctx.Value().String()
-		for _, r := range str {
-			if r > 127 {
-				return schema.ErrCheckFailed
-			}
-		}
-		return nil
-	})
+	r.Register("ascii", stringValidator(func(r rune) bool {
+		return r <= unicode.MaxASCII
+	}))
 
 	r.Register("boolean", func(ctx *schema.Context) error {
 		str := ctx.Value().String()
@@ -109,10 +63,8 @@ func registerString(r *Registry) {
 			return schema.ErrCheckFailed
 		}
 		r := []rune(runeStr)[0]
-		for _, sr := range str {
-			if sr == r {
-				return nil
-			}
+		if strings.ContainsRune(str, r) {
+			return nil
 		}
 		return schema.ErrCheckFailed
 	})
@@ -157,12 +109,10 @@ func registerString(r *Registry) {
 			return schema.ErrCheckFailed
 		}
 		r := []rune(runeStr)[0]
-		for _, sr := range str {
-			if sr == r {
-				return schema.ErrCheckFailed
-			}
+		if !strings.ContainsRune(str, r) {
+			return nil
 		}
-		return nil
+		return schema.ErrCheckFailed
 	})
 
 	r.Register("lowercase", func(ctx *schema.Context) error {
@@ -176,42 +126,22 @@ func registerString(r *Registry) {
 	r.Register("multibyte", func(ctx *schema.Context) error {
 		str := ctx.Value().String()
 		for _, r := range str {
-			if r > 127 {
+			if r > unicode.MaxASCII {
 				return nil
 			}
 		}
 		return schema.ErrCheckFailed
 	})
 
-	r.Register("number", func(ctx *schema.Context) error {
-		str := ctx.Value().String()
-		for _, r := range str {
-			if !unicode.IsDigit(r) {
-				return schema.ErrCheckFailed
-			}
-		}
-		return nil
-	})
+	r.Register("number", stringValidator(unicode.IsDigit))
 
-	r.Register("numeric", func(ctx *schema.Context) error {
-		str := ctx.Value().String()
-		for _, r := range str {
-			if !unicode.IsDigit(r) && r != '.' && r != '-' && r != '+' {
-				return schema.ErrCheckFailed
-			}
-		}
-		return nil
-	})
+	r.Register("numeric", stringValidator(func(r rune) bool {
+		return unicode.IsDigit(r) || r == '.' || r == '-' || r == '+'
+	}))
 
-	r.Register("printascii", func(ctx *schema.Context) error {
-		str := ctx.Value().String()
-		for _, r := range str {
-			if r > 127 || !unicode.IsPrint(r) {
-				return schema.ErrCheckFailed
-			}
-		}
-		return nil
-	})
+	r.Register("printascii", stringValidator(func(r rune) bool {
+		return r <= unicode.MaxASCII && unicode.IsPrint(r)
+	}))
 
 	r.Register("startsnotwith", func(ctx *schema.Context, prefix string) error {
 		str := ctx.Value().String()
@@ -237,4 +167,20 @@ func registerString(r *Registry) {
 		return schema.ErrCheckFailed
 	})
 	// ------------------------ end of workaround ------------------------
+}
+
+// runeCheckFunc defines a function that checks if a rune meets a condition
+type runeCheckFunc func(rune) bool
+
+// stringValidator validates a string by applying a rune check function to all characters
+func stringValidator(checkFunc runeCheckFunc) func(*schema.Context) error {
+	return func(ctx *schema.Context) error {
+		str := ctx.Value().String()
+		for _, r := range str {
+			if !checkFunc(r) {
+				return schema.ErrCheckFailed
+			}
+		}
+		return nil
+	}
 }

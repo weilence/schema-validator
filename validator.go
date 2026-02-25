@@ -35,6 +35,7 @@ func (v *Validator) Validate(value any) error {
 
 	// Create validation context
 	ctx := schema.NewContext(v.schema, accessor)
+
 	err := v.schema.Validate(ctx)
 	if err != nil {
 		return err

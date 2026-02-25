@@ -44,13 +44,11 @@ func (p contextPath) String() string {
 
 // NewContext 创建根 context
 func NewContext(schema Schema, accessor data.Accessor) *Context {
-	ctx := &Context{
+	return &Context{
 		schema:   schema,
 		accessor: accessor,
 		errs:     &ValidationErrors{},
 	}
-
-	return ctx
 }
 
 // WithChild 创建子 context（用于字段/元素验证）
